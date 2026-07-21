@@ -10,7 +10,17 @@ import ForecastLineChart from '../components/charts/ForecastLineChart';
 import DataTable, { Td } from '../components/ui/DataTable';
 import { C } from '../lib/tokens';
 import { fmt } from '../lib/utils';
-import { ANNUAL_FORECAST, PER_JENIS_2026, PLANT_KEYS, PLANT_META, MONTHLY_FORECAST_PER_PLT } from '../lib/data';
+import { ANNUAL_FORECAST, PER_JENIS_2026, PLANT_KEYS, PLANT_META, MONTHLY_FORECAST_PER_PLT, RUED_TARGET, BASELINE_COMPARISON } from '../lib/data';
+
+const [RUED_FROM, RUED_TO] = RUED_TARGET.anchors;
+
+// Kelompokkan BASELINE_COMPARISON per PLT untuk panel "Pembanding Metode"
+const BASELINE_BY_PLT = PLANT_KEYS.map(plt => {
+  const rows = BASELINE_COMPARISON.filter(r => r.plt === plt);
+  // Ranking pakai MAPE (bukan RMSE) supaya konsisten dengan angka yang ditampilkan di tabel.
+  const best = rows.reduce((a, b) => (b.mape < a.mape ? b : a), rows[0]);
+  return { plt, rows, best };
+}).filter(g => g.rows.length > 0);
 
 // Build per-PLT annual totals for 2027 and 2028 from monthly data
 function perPltAnnual(plant, year) {
@@ -97,8 +107,8 @@ export default function GapAnalysis() {
         />
         <Stat
           label="Target RUED"
-          value="20%"
-          sub="Tahun 2025 — menuju 32% pada 2050"
+          value={`${RUED_FROM.persen}%`}
+          sub={`Tahun ${RUED_FROM.year} — menuju ${RUED_TO.persen}% pada ${RUED_TO.year}`}
           icon={BookOpen}
           tip="Target bauran energi terhadap total energi daerah. Satuannya persen, bukan GWh — tidak dapat dibandingkan langsung dengan forecast."
         />
@@ -154,12 +164,56 @@ export default function GapAnalysis() {
                 <strong>Perbedaan satuan kritis:</strong> Target RUED diukur dalam <strong>persen bauran energi daerah</strong>, sedangkan output model LSTM adalah <strong>GWh produksi kelistrikan</strong>. Keduanya tidak dapat dibandingkan secara langsung tanpa data total energi daerah (listrik + non-listrik).
               </Note>
               <p className="text-xs" style={{ color: '#8E9C91' }}>
-                Hasil prediksi ini digunakan sebagai informasi pendukung evaluasi implementasi RUED, bukan sebagai pengukuran langsung terhadap capaian target bauran energi RUED (20% tahun 2025, 32% tahun 2050).
+                Hasil prediksi ini digunakan sebagai informasi pendukung evaluasi implementasi RUED, bukan sebagai pengukuran langsung terhadap capaian target bauran energi RUED ({RUED_FROM.persen}% tahun {RUED_FROM.year}, {RUED_TO.persen}% tahun {RUED_TO.year}).
               </p>
             </div>
           </Panel>
         </div>
       </div>
+
+      <Panel
+        title="Pembanding metode: LSTM vs metode tradisional"
+        note="Evaluasi pada data uji tahun 2025, split & metrik identik untuk ketiga metode (lihat audit/results/tugas2_findings.md)."
+        noPad
+      >
+        <DataTable
+          minWidth={560}
+          cols={[
+            { label: 'Jenis PLT', width: '22%' },
+            { label: 'LSTM (Fine-Tuning)', width: '20%', align: 'right' },
+            { label: 'ARIMA(1,1,1)', width: '20%', align: 'right' },
+            { label: 'Naive Persistence', width: '20%', align: 'right' },
+            { label: 'Metode Terbaik', width: '18%', align: 'right' },
+          ]}
+          rows={BASELINE_BY_PLT.map(({ plt, rows, best }) => {
+            const byModel = Object.fromEntries(rows.map(r => [r.model, r]));
+            const lstm = byModel['LSTM_FineTuning'];
+            const arima = byModel['ARIMA(1, 1, 1)'];
+            const naive = byModel['Naive_Persistence'];
+            const bestLabel = best?.model === 'LSTM_FineTuning' ? 'LSTM'
+              : best?.model === 'Naive_Persistence' ? 'Naive'
+              : best?.model?.startsWith('ARIMA') ? 'ARIMA' : '—';
+            return (
+              <tr key={plt} style={{ borderBottom: `1px solid ${C.line}` }}>
+                <Td>{plt}</Td>
+                <Td align="right" mono color={best?.model === 'LSTM_FineTuning' ? C.ok : undefined}>
+                  {lstm ? `${fmt(lstm.mape, 1)}%` : '—'}
+                </Td>
+                <Td align="right" mono color={best?.model?.startsWith('ARIMA') ? C.ok : undefined}>
+                  {arima ? `${fmt(arima.mape, 1)}%` : '—'}
+                </Td>
+                <Td align="right" mono color={best?.model === 'Naive_Persistence' ? C.ok : undefined}>
+                  {naive ? `${fmt(naive.mape, 1)}%` : '—'}
+                </Td>
+                <Td align="right" mono color={bestLabel === 'LSTM' ? C.blue : C.red}>{bestLabel}</Td>
+              </tr>
+            );
+          })}
+        />
+      </Panel>
+      <Note tone="warn">
+        MAPE (semakin kecil semakin baik). LSTM unggul di PLT skala besar/menengah, tapi <strong>naive persistence lebih akurat</strong> untuk PLTS dan PLTS Atap (skala produksi kecil) — klaim "LSTM lebih unggul" perlu dikualifikasi per jenis PLT, bukan digeneralisasi.
+      </Note>
 
       <Footer />
     </>

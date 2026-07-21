@@ -38,14 +38,18 @@ export function buildMonthly(plant, annualActual, annualForecast, perJenis2026) 
   return rows;
 }
 
-// Builds monthly series using real forecast data for 2026–2028,
-// and sinusoidal approximation for historical years 2023–2025.
+// Builds monthly series using real data throughout: actual monthly production
+// (reconstructed, see audit/source/README.md) for 2023–2025, and real model
+// forecast for 2026–2028. Falls back to a sinusoidal approximation from the
+// annual total only if real monthly data is unavailable for a given plant.
 export function buildMonthlyFromReal(plant, {
   annualActual,
   annualForecast,
   perJenis2026,
   monthlyForecastTotal,
   monthlyForecastPerPlt,
+  monthlyActualTotal,
+  monthlyActualPerPlt,
 }) {
   const totalForecast2026 = annualForecast.find(r => r.year === 2026)?.total ?? 1635.96;
   const shareMap = {
@@ -57,13 +61,21 @@ export function buildMonthlyFromReal(plant, {
 
   const rows = [];
 
-  // Historical years: sinusoidal approximation
-  [2023, 2024, 2025].forEach(year => {
-    const meanMonthly = ((anchors[year] ?? 0) * share) / 12;
-    const amplitude = meanMonthly * 0.18;
+  const monthlyActualData = plant === 'TOTAL' ? monthlyActualTotal : monthlyActualPerPlt?.[plant];
+
+  [2023, 2024, 2025].forEach((year, yi) => {
     for (let m = 0; m < 12; m++) {
-      const v = meanMonthly + amplitude * Math.sin((2 * Math.PI * (m - 2)) / 12);
+      const idx = yi * 12 + m;
       const isBridge = year === 2025 && m === 11;
+      let v;
+      if (monthlyActualData && monthlyActualData[idx] != null) {
+        v = monthlyActualData[idx];
+      } else {
+        // Fallback: sinusoidal approximation from annual total (no real data available)
+        const meanMonthly = ((anchors[year] ?? 0) * share) / 12;
+        const amplitude = meanMonthly * 0.18;
+        v = meanMonthly + amplitude * Math.sin((2 * Math.PI * (m - 2)) / 12);
+      }
       rows.push({
         label: `${year}-${String(m + 1).padStart(2, '0')}`,
         year, month: m + 1,

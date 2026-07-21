@@ -15,6 +15,7 @@ import {
   ANNUAL_ACTUAL, ANNUAL_FORECAST, PER_JENIS_2026,
   PLANT_KEYS, PLANT_META, MODEL_RMSE,
   MONTHLY_FORECAST_TOTAL, MONTHLY_FORECAST_PER_PLT,
+  MONTHLY_ACTUAL_TOTAL, MONTHLY_ACTUAL_PER_PLT,
 } from '../lib/data';
 
 const REAL_DATA_PARAMS = {
@@ -23,6 +24,8 @@ const REAL_DATA_PARAMS = {
   perJenis2026: PER_JENIS_2026,
   monthlyForecastTotal: MONTHLY_FORECAST_TOTAL,
   monthlyForecastPerPlt: MONTHLY_FORECAST_PER_PLT,
+  monthlyActualTotal: MONTHLY_ACTUAL_TOTAL,
+  monthlyActualPerPlt: MONTHLY_ACTUAL_PER_PLT,
 };
 
 export default function Prediksi() {
@@ -41,7 +44,11 @@ export default function Prediksi() {
     monthly.forEach(r => {
       if (!map[r.year]) map[r.year] = { year: r.year, aktualSum: 0, prediksiSum: 0, hasAktual: false, hasPrediksi: false };
       if (r.aktual != null) { map[r.year].aktualSum += r.aktual; map[r.year].hasAktual = true; }
-      if (r.prediksi != null) { map[r.year].prediksiSum += r.prediksi; map[r.year].hasPrediksi = true; }
+      // Titik "bridge" (bulan terakhir tahun aktual, dipakai supaya garis chart
+      // aktual->prediksi tersambung) punya aktual DAN prediksi terisi nilai
+      // yang sama -- jangan dihitung sebagai prediksi bulanan sungguhan, atau
+      // total prediksi tahun itu jadi cuma 1 bulan (bukan proyeksi 12 bulan).
+      if (r.prediksi != null && r.aktual == null) { map[r.year].prediksiSum += r.prediksi; map[r.year].hasPrediksi = true; }
     });
     return Object.values(map).sort((a, b) => a.year - b.year);
   }, [monthly]);
@@ -154,7 +161,7 @@ export default function Prediksi() {
             </button>
 
             <div className="mt-auto pt-3 border-t" style={{ borderColor: C.line }}>
-              <Gauge value={accuracy} size={168} label={`Akurasi model — RMSE ${fmt(rmse, 1)}%`} />
+              <Gauge value={accuracy} size={168} label={`Akurasi model — MAPE ${fmt(rmse, 1)}%`} />
             </div>
           </div>
         </Panel>
@@ -177,11 +184,11 @@ export default function Prediksi() {
               icon={TrendingUp}
             />
             <Stat
-              label="RMSE model"
+              label="MAPE model"
               value={fmt(rmse, 1)}
               unit="%"
               icon={Percent}
-              tip="Root Mean Square Error — semakin kecil, prediksi semakin mendekati nilai aktual."
+              tip="Mean Absolute Percentage Error (tahap Fine-Tuning) — semakin kecil, prediksi semakin mendekati nilai aktual."
             />
           </div>
           <Panel
@@ -226,7 +233,7 @@ export default function Prediksi() {
               Model LSTM memprediksi total produksi EBT sebesar <strong>{fmt(totalPred, 2)} GWh</strong> untuk periode {periodLabel}. Rata-rata tahunan {fmt(avgPred, 2)} GWh.
             </Note>
             <Note tone="info">
-              Jenis pembangkit yang dipilih: <strong>{plantLabel}</strong>. RMSE model {fmt(rmse, 1)}% menunjukkan tingkat kesalahan prediksi relatif terhadap nilai aktual.
+              Jenis pembangkit yang dipilih: <strong>{plantLabel}</strong>. MAPE model {fmt(rmse, 1)}% menunjukkan tingkat kesalahan prediksi relatif terhadap nilai aktual (tahap Fine-Tuning).
             </Note>
             <Note tone="warn">
               Nilai prediksi bersifat informatif dan dapat berubah jika data historis diperbarui atau model dilatih ulang dengan parameter berbeda.

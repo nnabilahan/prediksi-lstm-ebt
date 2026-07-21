@@ -13,6 +13,7 @@ import { fmt, buildMonthlyFromReal } from '../lib/utils';
 import {
   ANNUAL_ACTUAL, ANNUAL_FORECAST, TREND_ANNUAL, PER_JENIS_2026, PLANT_META,
   MONTHLY_FORECAST_TOTAL, MONTHLY_FORECAST_PER_PLT,
+  MONTHLY_ACTUAL_TOTAL, MONTHLY_ACTUAL_PER_PLT, RUED_TARGET,
 } from '../lib/data';
 import { useMemo } from 'react';
 
@@ -22,7 +23,11 @@ const REAL_DATA_PARAMS = {
   perJenis2026: PER_JENIS_2026,
   monthlyForecastTotal: MONTHLY_FORECAST_TOTAL,
   monthlyForecastPerPlt: MONTHLY_FORECAST_PER_PLT,
+  monthlyActualTotal: MONTHLY_ACTUAL_TOTAL,
+  monthlyActualPerPlt: MONTHLY_ACTUAL_PER_PLT,
 };
+
+const [RUED_FROM, RUED_TO] = RUED_TARGET.anchors;
 
 export default function Dashboard({ go }) {
   const allMonthly = useMemo(
@@ -33,6 +38,13 @@ export default function Dashboard({ go }) {
     () => allMonthly.filter(r => r.year >= 2025),
     [allMonthly]
   );
+
+  const lastActual = ANNUAL_ACTUAL[ANNUAL_ACTUAL.length - 1];
+  const prevActual = ANNUAL_ACTUAL[ANNUAL_ACTUAL.length - 2];
+  const lastActualYoy = prevActual
+    ? ((lastActual.total - prevActual.total) / prevActual.total) * 100
+    : null;
+  const forecast2026 = ANNUAL_FORECAST.find(r => r.year === 2026);
 
   return (
     <>
@@ -45,12 +57,12 @@ export default function Dashboard({ go }) {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Stat
           label="Total produksi EBT terakhir"
-          value={fmt(1320, 0)}
+          value={fmt(lastActual?.total, 0)}
           unit="GWh"
-          sub="+5,6% dari tahun sebelumnya"
-          tone="up"
+          sub={lastActualYoy != null ? `${lastActualYoy >= 0 ? '+' : ''}${fmt(lastActualYoy, 1)}% dari tahun sebelumnya` : undefined}
+          tone={lastActualYoy != null && lastActualYoy >= 0 ? 'up' : undefined}
           icon={Zap}
-          tip="Total seluruh jenis PLT pada tahun observasi terakhir (2025)"
+          tip={`Total seluruh jenis PLT pada tahun observasi terakhir (${lastActual?.year})`}
         />
         <Stat
           label="Jumlah jenis PLT"
@@ -61,8 +73,8 @@ export default function Dashboard({ go }) {
         />
         <Stat
           label="Target RUED"
-          value="20%"
-          sub="Tahun 2025 — menuju 32% pada 2050"
+          value={`${RUED_FROM.persen}%`}
+          sub={`Tahun ${RUED_FROM.year} — menuju ${RUED_TO.persen}% pada ${RUED_TO.year}`}
           icon={Target}
           tip="Target bauran energi EBT terhadap total energi daerah (listrik + non-listrik), bukan target produksi GWh."
         />
@@ -92,7 +104,7 @@ export default function Dashboard({ go }) {
           <DonutChart
             data={PER_JENIS_2026}
             centerLabel="Total 2026"
-            centerValue="1.636 GWh"
+            centerValue={`${fmt(forecast2026?.total, 0)} GWh`}
           />
         </Panel>
       </div>
@@ -102,7 +114,7 @@ export default function Dashboard({ go }) {
         <Panel
           className="lg:col-span-5"
           title="Tren produksi EBT historis"
-          subtitle="Total tahunan 2022–2025 + proyeksi"
+          subtitle={`Total tahunan ${ANNUAL_ACTUAL[0]?.year}–${lastActual?.year} + proyeksi`}
         >
           <AnnualChart data={TREND_ANNUAL} height={224} />
         </Panel>
@@ -175,7 +187,7 @@ export default function Dashboard({ go }) {
         <Panel className="lg:col-span-7" title="Catatan pembacaan">
           <div className="space-y-3">
             <Note tone="info">
-              Forecast produksi EBT sektor kelistrikan digunakan sebagai <strong>informasi pendukung</strong> evaluasi implementasi RUED, bukan sebagai pengukuran langsung capaian target bauran energi (20% tahun 2025, 32% tahun 2050).
+              Forecast produksi EBT sektor kelistrikan digunakan sebagai <strong>informasi pendukung</strong> evaluasi implementasi RUED, bukan sebagai pengukuran langsung capaian target bauran energi ({RUED_FROM.persen}% tahun {RUED_FROM.year}, {RUED_TO.persen}% tahun {RUED_TO.year}).
             </Note>
             <Note tone="warn">
               Analisis hanya mencakup <strong>sektor kelistrikan</strong>. Sektor non-listrik (biofuel, biogas, energi termal) tidak diprediksi karena dokumentasi historisnya belum konsisten.
