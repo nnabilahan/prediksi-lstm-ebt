@@ -1,5 +1,10 @@
 # Laporan Tugas 2 — Gap Analysis RUED & Baseline Non-DL
 
+**Update 2026-07-23**: seluruh angka di dokumen ini sudah dijalankan ulang
+memakai model hasil perbaikan data leakage (lihat
+[`audit_findings.md`](audit_findings.md) bagian 4) — angka sebelumnya
+diarsipkan di `baseline_comparison_before_leakage_fix.csv`.
+
 Branch: `audit/lstm-pipeline`
 Script: [`audit/analysis/gap_rued.py`](../analysis/gap_rued.py), [`audit/analysis/baseline_compare.py`](../analysis/baseline_compare.py)
 Output: [`gap_analysis_2026_2028.csv`](gap_analysis_2026_2028.csv), [`gap_analysis_2026_2028.png`](gap_analysis_2026_2028.png), [`baseline_comparison.csv`](baseline_comparison.csv)
@@ -19,9 +24,9 @@ Forecast model ini hanya mencakup **produksi EBT sektor kelistrikan** (GWh) — 
 
 | Tahun | Target Bauran EBT RUED (%, seluruh sektor) | Forecast EBT Kelistrikan (GWh/tahun) |
 |---|---|---|
-| 2026 | 22.4 (interpolasi linear 20%→32%) | 1.628,49 |
-| 2027 | 24.8 | 1.604,53 |
-| 2028 | 27.2 | 1.603,32 |
+| 2026 | 22.4 (interpolasi linear 20%→32%) | 1.636,32 |
+| 2027 | 24.8 | 1.611,23 |
+| 2028 | 27.2 | 1.609,93 |
 
 Trennya: target RUED terus naik (+2,4 poin persen/tahun), sementara forecast EBT kelistrikan justru **turun/stagnan** dari 2026 ke 2028. Ini konsisten dengan temuan RMSE PLTB yang tinggi di Tugas 1 (LSTM kesulitan menangkap tren PLTB, kontributor produksi terbesar) — layak dibahas di Bab IV/V sebagai catatan bahwa proyeksi kelistrikan saja (tanpa data sektor lain) tidak bisa dipakai untuk menyimpulkan pencapaian/kegagalan target RUED secara keseluruhan.
 
@@ -33,21 +38,23 @@ Trennya: target RUED terus naik (+2,4 poin persen/tahun), sementara forecast EBT
 
 Metodologi split **identik** dengan tahap Fine-Tuning LSTM (train=2023-2024, test=2025, dataset regional `DATA_PHASE_3_REGIONAL_MODIFIED.csv`), metrik RMSE/MAE/MAPE dihitung dengan formula yang sama persis dengan `hitung_mape()` di `bs_tf_lstm_fix.py`. ARIMA order tetap (1,1,1) untuk semua PLT (bukan auto-tuned — data terlalu pendek untuk tuning yang andal, lihat catatan di script).
 
-**Hasil (siapa menang per PLT, RMSE terkecil):**
+**Hasil (siapa menang per PLT, RMSE terkecil) — SETELAH perbaikan leakage:**
 
 | PLT | Model Terbaik | RMSE |
 |---|---|---|
 | PLT Hybrid | **LSTM Fine-Tuning** | 0,029 |
-| PLTA | **LSTM Fine-Tuning** | 3,426 |
-| PLTB | **LSTM Fine-Tuning** | 12,019 |
-| PLTM | **LSTM Fine-Tuning** | 3,575 |
-| PLTMH | **LSTM Fine-Tuning** | 2,063 |
+| PLTA | **LSTM Fine-Tuning** | 3,330 |
+| PLTB | ARIMA(1,1,1) | 12,710 |
+| PLTM | **LSTM Fine-Tuning** | 3,505 |
+| PLTMH | **LSTM Fine-Tuning** | 2,003 |
 | PLTS | Naive Persistence | 0,115 |
 | PLTS Atap | Naive Persistence | 0,138 |
 
-**Temuan jujur — bukan "LSTM selalu menang"**: LSTM unggul di 5 dari 7 jenis PLT (semua yang skala produksinya besar/menengah), tapi **kalah dari naive persistence** di PLTS dan PLTS Atap (skala produksi paling kecil, <2 GWh/bulan) — ARIMA(1,1,1) konsisten menjadi yang **terburuk** di 6 dari 7 PLT.
+**Perubahan dari temuan sebelum perbaikan leakage**: sebelumnya LSTM menang tipis di PLTB (RMSE 12,02 vs ARIMA 12,71); setelah scaler diperbaiki agar tidak "mengintip" data uji 2025, RMSE LSTM PLTB naik jadi 13,23 — sekarang **ARIMA yang menang di PLTB**. PLTS dan PLTS Atap tetap dimenangkan naive persistence seperti sebelumnya.
 
-**Implikasi untuk klaim Bab I ("LSTM lebih unggul dari metode tradisional")**: klaim ini **didukung secara empiris untuk PLT skala besar/menengah** (PLTA, PLTB, PLTM, PLTMH, PLT Hybrid), tapi **perlu dikualifikasi** untuk PLT skala kecil (PLTS, PLTS Atap) di mana pola datanya lebih mendekati random-walk sederhana sehingga naive persistence justru lebih kompetitif. Ini temuan yang lebih kredibel untuk Bab IV dibanding klaim generalisasi tanpa kualifikasi.
+**Temuan jujur — bukan "LSTM selalu menang"**: LSTM unggul di **4 dari 7** jenis PLT (PLT Hybrid, PLTA, PLTM, PLTMH — semua skala menengah), **kalah dari ARIMA** di PLTB (skala produksi terbesar), dan **kalah dari naive persistence** di PLTS & PLTS Atap (skala produksi terkecil).
+
+**Implikasi untuk klaim Bab I ("LSTM lebih unggul dari metode tradisional")**: klaim ini **didukung secara empiris hanya untuk PLT skala menengah** (PLTA, PLTM, PLTMH, PLT Hybrid) — **tidak lagi bisa digeneralisasi ke PLTB** seperti temuan awal (sebelum leakage diperbaiki). Ini justru memperkuat pentingnya audit data leakage: kesimpulan "LSTM menang di PLT besar" yang sempat muncul di analisis awal ternyata sebagian dipengaruhi oleh bias metrik akibat leakage, bukan murni kemampuan model. Temuan yang lebih jujur (dan lebih kredibel untuk Bab IV): LSTM unggul di PLT skala menengah, tapi metode tradisional (ARIMA/naive) kompetitif atau lebih baik di kedua ujung ekstrem (PLT terbesar dan PLT terkecil).
 
 ---
 

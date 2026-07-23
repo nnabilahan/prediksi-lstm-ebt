@@ -212,7 +212,7 @@ export default function GapAnalysis() {
         />
       </Panel>
       <Note tone="warn">
-        MAPE (semakin kecil semakin baik). LSTM unggul di PLT skala besar/menengah, tapi <strong>naive persistence lebih akurat</strong> untuk PLTS dan PLTS Atap (skala produksi kecil) — klaim "LSTM lebih unggul" perlu dikualifikasi per jenis PLT, bukan digeneralisasi.
+        MAPE (semakin kecil semakin baik). LSTM unggul di PLT skala menengah (PLTA, PLTM, PLTMH, PLT Hybrid), tapi <strong>ARIMA lebih akurat</strong> di PLTB (skala terbesar) dan <strong>naive persistence lebih akurat</strong> di PLTS &amp; PLTS Atap (skala terkecil) — klaim "LSTM lebih unggul" perlu dikualifikasi per jenis PLT, bukan digeneralisasi.
       </Note>
 
       <Footer />

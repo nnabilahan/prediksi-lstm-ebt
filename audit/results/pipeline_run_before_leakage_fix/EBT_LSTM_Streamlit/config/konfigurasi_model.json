@@ -1,0 +1,135 @@
+{
+    "PLTA": {
+        "jenis_plt": "PLTA",
+        "metode": "Transfer Learning",
+        "window_size": 6,
+        "learning_rate": 0.0001,
+        "dropout": 0.2,
+        "batch_size": 8,
+        "epochs": 100,
+        "optimizer": "Adam",
+        "fitur_input": [
+            "Cuaca",
+            "Kapasitas",
+            "Produksi"
+        ],
+        "target_prediksi": "Produksi",
+        "nama_file_model": "model_final_PLTA.keras",
+        "nama_file_scaler_fitur": "scaler_fitur_PLTA.pkl",
+        "nama_file_scaler_target": "scaler_target_PLTA.pkl"
+    },
+    "PLTB": {
+        "jenis_plt": "PLTB",
+        "metode": "Transfer Learning",
+        "window_size": 6,
+        "learning_rate": 0.0001,
+        "dropout": 0.2,
+        "batch_size": 8,
+        "epochs": 100,
+        "optimizer": "Adam",
+        "fitur_input": [
+            "Cuaca",
+            "Kapasitas",
+            "Produksi"
+        ],
+        "target_prediksi": "Produksi",
+        "nama_file_model": "model_final_PLTB.keras",
+        "nama_file_scaler_fitur": "scaler_fitur_PLTB.pkl",
+        "nama_file_scaler_target": "scaler_target_PLTB.pkl"
+    },
+    "PLTMH": {
+        "jenis_plt": "PLTMH",
+        "metode": "Transfer Learning",
+        "window_size": 6,
+        "learning_rate": 0.0001,
+        "dropout": 0.2,
+        "batch_size": 8,
+        "epochs": 100,
+        "optimizer": "Adam",
+        "fitur_input": [
+            "Cuaca",
+            "Kapasitas",
+            "Produksi"
+        ],
+        "target_prediksi": "Produksi",
+        "nama_file_model": "model_final_PLTMH.keras",
+        "nama_file_scaler_fitur": "scaler_fitur_PLTMH.pkl",
+        "nama_file_scaler_target": "scaler_target_PLTMH.pkl"
+    },
+    "PLTS": {
+        "jenis_plt": "PLTS",
+        "metode": "Transfer Learning",
+        "window_size": 6,
+        "learning_rate": 0.0001,
+        "dropout": 0.2,
+        "batch_size": 8,
+        "epochs": 100,
+        "optimizer": "Adam",
+        "fitur_input": [
+            "Cuaca",
+            "Kapasitas",
+            "Produksi"
+        ],
+        "target_prediksi": "Produksi",
+        "nama_file_model": "model_final_PLTS.keras",
+        "nama_file_scaler_fitur": "scaler_fitur_PLTS.pkl",
+        "nama_file_scaler_target": "scaler_target_PLTS.pkl"
+    },
+    "PLTM": {
+        "jenis_plt": "PLTM",
+        "metode": "Direct Training",
+        "window_size": 6,
+        "learning_rate": 0.0001,
+        "dropout": 0.2,
+        "batch_size": 8,
+        "epochs": 100,
+        "optimizer": "Adam",
+        "fitur_input": [
+            "Cuaca",
+            "Kapasitas",
+            "Produksi"
+        ],
+        "target_prediksi": "Produksi",
+        "nama_file_model": "model_final_PLTM.keras",
+        "nama_file_scaler_fitur": "scaler_fitur_PLTM.pkl",
+        "nama_file_scaler_target": "scaler_target_PLTM.pkl"
+    },
+    "PLTS Atap": {
+        "jenis_plt": "PLTS Atap",
+        "metode": "Direct Training",
+        "window_size": 6,
+        "learning_rate": 0.0001,
+        "dropout": 0.2,
+        "batch_size": 8,
+        "epochs": 100,
+        "optimizer": "Adam",
+        "fitur_input": [
+            "Cuaca",
+            "Kapasitas",
+            "Produksi"
+        ],
+        "target_prediksi": "Produksi",
+        "nama_file_model": "model_final_PLTS_Atap.keras",
+        "nama_file_scaler_fitur": "scaler_fitur_PLTS_Atap.pkl",
+        "nama_file_scaler_target": "scaler_target_PLTS_Atap.pkl"
+    },
+    "PLT Hybrid": {
+        "jenis_plt": "PLT Hybrid",
+        "metode": "Direct Training",
+        "window_size": 6,
+        "learning_rate": 0.0001,
+        "dropout": 0.2,
+        "batch_size": 8,
+        "epochs": 100,
+        "optimizer": "Adam",
+        "fitur_input": [
+            "Cuaca",
+            "Kapasitas",
+            "Produksi"
+        ],
+        "target_prediksi": "Produksi",
+        "nama_file_model": "model_final_PLT_Hybrid.keras",
+        "nama_file_scaler_fitur": "scaler_fitur_PLT_Hybrid.pkl",
+        "nama_file_scaler_target": "scaler_target_PLT_Hybrid.pkl"
+    }
+}

@@ -1,11 +1,19 @@
 # Laporan Audit Tugas 1 — Pipeline LSTM EBT
 
-Tanggal audit: 2026-07-21
+Tanggal audit: 2026-07-21 (update 2026-07-23: leakage sudah diperbaiki, lihat bagian 4)
 Branch: `audit/lstm-pipeline`
-Sumber: `audit/source/bs_tf_lstm_fix.py` (salinan tidak diubah dari Colab)
-Runner: `audit/run_pipeline.py` (adaptasi non-interaktif, lihat bagian "Cara Menjalankan" di bawah)
-Log lengkap: [`run_log.txt`](run_log.txt) (808+ baris, seluruh output stdout end-to-end)
-Ringkasan metrik: [`eval_summary.csv`](eval_summary.csv)
+Sumber asli (tidak diubah): `audit/source/bs_tf_lstm_fix.py`
+Sumber diperbaiki: `audit/source_fixed/bs_tf_lstm_fix_fixed.py` (+ versi `.ipynb`) — lihat bagian 4
+Runner asli: `audit/run_pipeline.py` — runner diperbaiki: `audit/run_pipeline_fixed.py`
+Log lengkap (versi diperbaiki, jadi acuan utama sekarang): [`run_log_fixed.txt`](run_log_fixed.txt)
+Log lengkap (versi asli, sebelum fix, diarsipkan): [`run_log.txt`](run_log.txt)
+Ringkasan metrik (versi diperbaiki): [`eval_summary.csv`](eval_summary.csv)
+Ringkasan metrik (versi sebelum fix, diarsipkan): [`eval_summary_before_leakage_fix.csv`](eval_summary_before_leakage_fix.csv)
+
+> **Catatan penting**: Semua angka di bagian 1-2 dokumen ini SUDAH mencerminkan
+> hasil SETELAH perbaikan leakage (bagian 4). Folder `audit/results/pipeline_run/`
+> sekarang berisi output dari run yang sudah diperbaiki; output run yang lama
+> diarsipkan di `audit/results/pipeline_run_before_leakage_fix/`.
 
 ---
 
@@ -30,21 +38,21 @@ Ringkasan metrik: [`eval_summary.csv`](eval_summary.csv)
 
 Lihat [`eval_summary.csv`](eval_summary.csv) untuk tabel lengkap (35 baris = 7 PLT × 5 tahap: Baseline, Fine-Tuning, Iterasi1, Iterasi2, Iterasi3). Ringkasan:
 
-- **Model terbaik per PLT** (RMSE terkecil, dari `model_terbaik_per_plt.csv`):
+- **Model terbaik per PLT** (RMSE terkecil, dari `model_terbaik_per_plt.csv`, SETELAH perbaikan leakage):
   | PLT | Model Terbaik | RMSE |
   |---|---|---|
-  | PLT Hybrid | Fine-Tuning | 0.0290 |
-  | PLTS | Fine-Tuning | 0.1233 |
-  | PLTS Atap | Baseline | 0.1770 |
-  | PLTMH | Baseline | 2.0110 |
-  | PLTM | Baseline | 2.7945 |
-  | PLTA | Baseline | 3.2995 |
-  | PLTB | Iterasi 3 | 11.9845 |
-- **Rata-rata seluruh model** (dari `ringkasan_rata2_seluruh_model.csv`): Fine-Tuning punya rata-rata RMSE/MAE terendah (3.07 / 2.62), tapi rata-rata MAPE terendah justru Baseline (13.37%) — Iterasi2 konsisten terburuk di semua metrik (RMSE 5.46, MAPE 22.28%).
-- **PLTB** memiliki RMSE & MAPE tertinggi di semua tahap (~12-15 RMSE, ~21-24% MAPE) — jauh lebih sulit diprediksi dibanding PLT lain, kemungkinan karena skala produksi PLTB lebih besar dan/atau variasi datanya lebih tinggi.
-- Model final yang dipakai untuk forecasting 2026-2028 memakai kombinasi metode per PLT (`Transfer Learning` untuk PLTA/PLTB/PLTMH/PLTS, `Direct Training` untuk PLTM/PLTS Atap/PLT Hybrid) sesuai `model_terbaik_per_plt.csv` — bukan selalu tahap "Final" tersendiri, karena tahap "MODEL FINAL" di source melatih ulang dengan seluruh data (lihat poin 4 di bawah), tidak menghasilkan RMSE/MAE/MAPE baru (tidak ada data uji tersisa).
+  | PLT Hybrid | Fine-Tuning | 0.0292 |
+  | PLTS | Fine-Tuning | 0.1176 |
+  | PLTS Atap | Baseline | 0.1833 |
+  | PLTMH | Fine-Tuning | 2.0029 |
+  | PLTM | Baseline | 2.7782 |
+  | PLTA | Fine-Tuning | 3.3300 |
+  | PLTB | Iterasi 3 | 13.1285 |
+- **Rata-rata seluruh model** (dari `ringkasan_rata2_seluruh_model.csv`): Fine-Tuning masih rata-rata RMSE/MAE terendah (3.22 / 2.68), rata-rata MAPE terendah tetap Baseline (13.39%) — Iterasi2 tetap konsisten terburuk (RMSE 5.28, MAPE 20.99%). Urutan relatif antar tahap tidak banyak berubah dari sebelum perbaikan.
+- **PLTB** tetap memiliki RMSE & MAPE tertinggi di semua tahap (~13-15 RMSE, ~23-26% MAPE) — jauh lebih sulit diprediksi dibanding PLT lain.
+- Model final yang dipakai untuk forecasting 2026-2028 memakai kombinasi metode per PLT (`Transfer Learning` untuk PLTA/PLTB/PLTMH/PLTS, `Direct Training` untuk PLTM/PLTS Atap/PLT Hybrid) sesuai `model_terbaik_per_plt.csv`.
 
-Forecast total 2026-2028 (`pipeline_run/EBT_LSTM_Streamlit/forecast/forecast_total_2026_2028.csv`) menunjukkan proyeksi total produksi EBT regional turun dari **1.636,6 GWh (2026)** ke **~1.608-1.610 GWh (2027-2028)** — relatif datar/menurun tipis, bukan tren naik tajam.
+Forecast total 2026-2028 (SETELAH perbaikan; `pipeline_run/EBT_LSTM_Streamlit/forecast/forecast_total_2026_2028.csv`) menunjukkan proyeksi total produksi EBT regional turun dari **1.636,3 GWh (2026)** ke **~1.610-1.611 GWh (2027-2028)** — pola yang sama (datar/menurun tipis) dengan sebelum perbaikan, angka absolut sedikit berbeda (selisih <0,1%).
 
 ---
 
@@ -72,24 +80,40 @@ Forecast total 2026-2028 (`pipeline_run/EBT_LSTM_Streamlit/forecast/forecast_tot
 
 ---
 
-## 4. Temuan: Data Leakage (Scaler Fit-Before-Split)
+## 4. Temuan: Data Leakage (Scaler Fit-Before-Split) — SUDAH DIPERBAIKI (2026-07-23)
 
-**Status: dikonfirmasi — leakage sistemik skala kecil di seluruh tahap pipeline yang punya train/test split.**
+**Status: dikonfirmasi 2026-07-21, DIPERBAIKI 2026-07-23 atas konfirmasi pengguna.**
 
-Pola yang berulang di 4 tahap (Baseline, Pre-Training Nasional, Fine-Tuning, Iterasi 1-3): `MinMaxScaler().fit_transform()` dipanggil pada **seluruh deret waktu per-PLT** SEBELUM data displit menjadi train/test:
+Pola yang ditemukan: `MinMaxScaler().fit_transform()` dipanggil pada **seluruh deret waktu per-PLT** SEBELUM data displit menjadi train/test, di **3 lokasi fit scaler** (bukan 4 seperti dugaan awal — Fine-Tuning dan Iterasi 1/2/3 ternyata memakai ULANG satu scaler yang sama, `data_scaled_regional_per_plt`, bukan fit scaler baru per iterasi):
 
-| Tahap | Baris fit scaler | Baris split |
-|---|---|---|
-| Baseline (regional, univariate) | `bs_tf_lstm_fix.py:117` | `bs_tf_lstm_fix.py:167` |
-| Pre-Training (nasional, multivariate) | `bs_tf_lstm_fix.py:493-494` | `bs_tf_lstm_fix.py:555-556` (mask tahun) |
-| Fine-Tuning (regional, multivariate) | `bs_tf_lstm_fix.py:802-803` | `bs_tf_lstm_fix.py:859-872` (mask tahun, test=2025) |
-| Iterasi 1-3 | pola serupa (scaler baru per iterasi, fit sebelum split) | — |
+| # | Tahap | Baris fit scaler (asli) | Baris split |
+|---|---|---|---|
+| 1 | Baseline (regional, univariate) | `bs_tf_lstm_fix.py:117` | `bs_tf_lstm_fix.py:167` (index, `TRAIN_RATIO`) |
+| 2 | Pre-Training (nasional, multivariate) | `bs_tf_lstm_fix.py:493-494` | `bs_tf_lstm_fix.py:555-556` (mask tahun ≤2023/2024) |
+| 3 | Regional (dipakai bersama Fine-Tuning **+ Iterasi 1/2/3**) | `bs_tf_lstm_fix.py:802-803` | `bs_tf_lstm_fix.py:859-872` (mask tahun 2023-2024/test=2025) |
 
-**Akibatnya:** rentang min-max yang dipakai untuk menormalisasi data (termasuk yang nanti jadi "data uji"/test) ikut dihitung dari nilai test itu sendiri — nilai ekstrem di test set memengaruhi skala normalisasi data train. ­Ini leakage ringan (bukan leakage label langsung seperti target bocor ke fitur), tapi tetap melanggar prinsip "test set tidak boleh memengaruhi proses training apa pun, termasuk preprocessing".
+Tahap "MODEL FINAL" (baris ~2360-2378) **tetap TIDAK diubah** — dia sengaja memakai seluruh data 2023-2025 tanpa held-out test (baris 2351: "TANPA menyisakan data uji"), jadi tidak ada split yang bisa bocor di situ.
 
-**Dampak terhadap validitas hasil skripsi:** metrik RMSE/MAE/MAPE yang dilaporkan kemungkinan **sedikit optimis (bias rendah)** dibanding jika scaler di-fit hanya pada train lalu di-transform ke test. Mengingat ukuran dataset regional sangat kecil (253 baris total, ~36 baris per PLT), efek ini bisa cukup terasa secara relatif meskipun kecil secara absolut.
+### Perbaikan yang diterapkan
+File baru `audit/source_fixed/bs_tf_lstm_fix_fixed.py` (+ `bs_tf_lstm_fix_fixed.ipynb`, lihat di bawah) — **file asli `audit/source/bs_tf_lstm_fix.py` TIDAK diubah**, tetap sebagai arsip versi awal. Di ketiga lokasi di atas, polanya diganti dari `scaler.fit_transform(seluruh_data)` menjadi `scaler.fit(hanya_porsi_train)` lalu `scaler.transform(seluruh_data)` — detail & alasan tiap perubahan ada di komentar `[FIX LEAKAGE #1/#2/#3]` langsung di kodenya.
 
-**Rekomendasi perbaikan (BELUM diterapkan di audit ini, sesuai instruksi "jangan ubah kode sebelum direview")**: untuk setiap tahap, urutan seharusnya dibalik — split dulu (kronologis) baru `scaler.fit(train)` lalu `scaler.transform(train)` dan `scaler.transform(test)` (bukan `fit_transform` pada gabungan). Ini perlu keputusan pengguna dulu sebelum diimplementasikan, karena akan mengubah semua angka evaluasi yang sudah ada di `eval_summary.csv`.
+### Dampak empiris (before vs after, MAPE %)
+Perbandingan lengkap ada di `eval_summary_before_leakage_fix.csv` vs `eval_summary.csv`. Ringkasan tahap Baseline & Fine-Tuning:
+
+| Tahap | PLT | MAPE Sebelum | MAPE Sesudah | Selisih |
+|---|---|---|---|---|
+| Fine-Tuning | PLTB | 21,14% | 23,62% | **+2,48** |
+| Fine-Tuning | PLTS Atap | 26,38% | 27,96% | +1,57 |
+| Fine-Tuning | PLTS | 12,17% | 11,52% | −0,65 |
+| Fine-Tuning | PLTMH | 11,52% | 10,88% | −0,64 |
+| Fine-Tuning | PLTM | 10,99% | 10,59% | −0,40 |
+| Fine-Tuning | PLTA | 9,23% | 8,94% | −0,29 |
+| Fine-Tuning | PLT Hybrid | 11,26% | 11,32% | +0,05 |
+| Baseline | rata-rata 7 PLT | — | — | umumnya <0,5 poin, arah campuran |
+
+**Kesimpulan dampak**: seperti diduga di laporan awal, leakage-nya **skala kecil** (mayoritas pergeseran MAPE <1 poin persentase, arah campuran — tidak selalu membuat model "lebih bagus"). Tapi **PLTB terdampak paling besar** (+2,48 poin MAPE setelah diperbaiki) — konsisten dengan temuan bahwa PLTB memang PLT paling sulit diprediksi di pipeline ini. Perbaikan ini juga **mengubah hasil "model terbaik per PLT"**: PLTMH dan PLTA yang sebelumnya menang di tahap Baseline, sekarang menang di Fine-Tuning (lihat tabel bagian 2).
+
+**Dampak lanjutan ke Tugas 2 (baseline comparison)**: dengan angka yang sudah diperbaiki, **PLTB sekarang kalah dari ARIMA** (LSTM MAPE 23,62% vs ARIMA 18,89%) — sebelumnya LSTM menang tipis di PLTB. Jadi setelah perbaikan, LSTM menang di **4 dari 7 PLT** (PLT Hybrid, PLTA, PLTM, PLTMH), bukan 5 dari 7 seperti temuan awal — lihat `tugas2_findings.md` untuk detail lengkap.
 
 ---
 
@@ -109,11 +133,19 @@ Sesuai batasan yang diminta: seluruh data pada pipeline ini adalah hasil **rekon
 
 ---
 
+## 7. Versi .ipynb (untuk dibuka lagi di Google Colab)
+
+`audit/source_fixed/bs_tf_lstm_fix_fixed.ipynb` dibuat dari `bs_tf_lstm_fix_fixed.py` memakai converter generik `audit/analysis/py_to_ipynb.py`. Konverter ini memecah kode jadi cell berdasarkan (a) marker markdown asli Colab (`"""Judul"""` berdiri sendiri — hanya ada 3 di file ini) dan (b) banner komentar `# ====.../# Judul/# ====...` yang dipakai sebagai penanda sub-section di sisa file, menghasilkan 114 cell (bukan 1 cell raksasa). **Keterbatasan yang perlu diketahui**: file `.py` hasil "download" Colab tidak menyimpan batas cell asli untuk kode yang TIDAK dipisah markdown cell di notebook aslinya — jadi granularitas cell di `.ipynb` hasil konversi ini adalah rekonstruksi terbaik dari sisa informasi yang ada (banner komentar), bukan replika 100% persis dari cell-per-cell notebook Colab yang asli. Notebook sudah divalidasi valid (JSON ter-parse, kode gabungan seluruh cell ter-compile tanpa error sintaks).
+
 ## Cara Menjalankan Ulang
 
 ```bash
 cd C:\prediksi-lstm-ebt-react-app
-python audit/run_pipeline.py > audit/results/run_log.txt 2>&1
+# Versi sudah diperbaiki (dipakai sebagai acuan utama sekarang):
+python audit/run_pipeline_fixed.py > audit/results/run_log_fixed.txt 2>&1
+
+# Versi asli/sebelum-fix (arsip, untuk pembanding):
+python audit/run_pipeline.py > audit/results/run_log_before_leakage_fix.txt 2>&1
 ```
 
-Output akan muncul di `audit/results/pipeline_run/` (model, scaler, forecast, evaluation — tidak di-commit ke git karena besar, lihat `.gitignore`) dan `audit/results/pipeline_run/EBT_LSTM_Streamlit/` (struktur folder deliverable sesuai desain asli script, termasuk `EBT_LSTM_Streamlit.zip`).
+Output versi diperbaiki: `audit/results/pipeline_run/` (folder ini sekarang berisi hasil SETELAH fix — hasil sebelum fix diarsipkan di `pipeline_run_before_leakage_fix/`). Isi tiap folder: model, scaler, forecast, evaluation (tidak di-commit ke git karena besar, lihat `.gitignore`) dan `EBT_LSTM_Streamlit/` (struktur folder deliverable sesuai desain asli script, termasuk `EBT_LSTM_Streamlit.zip`).
