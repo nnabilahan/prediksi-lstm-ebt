@@ -1,0 +1,37 @@
+{
+    "judul_penelitian": "Prediksi Produksi Energi Baru Terbarukan (EBT) Sektor Kelistrikan Provinsi Sulawesi Selatan Menggunakan LSTM dengan Transfer Learning",
+    "metodologi": "CRISP-DM",
+    "jenis_plt": [
+        "PLTA",
+        "PLTB",
+        "PLTMH",
+        "PLTS",
+        "PLTM",
+        "PLTS Atap",
+        "PLT Hybrid"
+    ],
+    "periode_data_historis": "2023-2025 (Regional), 2020-2024 (Nasional untuk Pre-Training)",
+    "periode_forecasting": "Januari 2026 - Desember 2028",
+    "model_terbaik_keseluruhan": "Iterasi1",
+    "konfigurasi_model_terbaik_keseluruhan": {
+        "Metode": "Transfer Learning (PLTA,PLTB,PLTM,PLTMH,PLTS) / Direct Training (PLTS Atap, PLT Hybrid)",
+        "Window_Size": 6,
+        "Learning_Rate": 5e-05,
+        "Dropout": 0.2,
+        "Batch_Size": 8,
+        "Epochs": 100,
+        "Optimizer": "Adam",
+        "Callback": "EarlyStopping, ReduceLROnPlateau"
+    },
+    "metode_per_plt": {
+        "PLTA": "Transfer Learning",
+        "PLTB": "Transfer Learning",
+        "PLTMH": "Transfer Learning",
+        "PLTS": "Transfer Learning",
+        "PLTM": "Direct Training",
+        "PLTS Atap": "Direct Training",
+        "PLT Hybrid": "Direct Training"
+    },
+    "tanggal_dibuat": "2026-07-26 00:31:56",
+    "catatan": "Forecasting menggunakan pendekatan autoregressive dengan asumsi fitur Cuaca dan Kapasitas mengikuti Last Observation Carried Forward (LOCF)."
+}

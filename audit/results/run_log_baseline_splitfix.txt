@@ -1,0 +1,884 @@
+2026-07-26 00:23:15.312151: I tensorflow/core/util/port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+2026-07-26 00:23:21.605915: I tensorflow/core/util/port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+C:\prediksi-lstm-ebt-react-app\audit\source_fixed\bs_tf_lstm_fix_fixed.py:116: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown
+  plt.show()
+C:\prediksi-lstm-ebt-react-app\audit\source_fixed\bs_tf_lstm_fix_fixed.py:125: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown
+  plt.show()
+2026-07-26 00:23:33.234595: I tensorflow/core/platform/cpu_feature_guard.cc:210] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: SSE3 SSE4.1 SSE4.2 AVX AVX2 AVX_VNNI FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+C:\Users\LENOVO\AppData\Local\Programs\Python\Python312\Lib\site-packages\keras\src\layers\rnn\rnn.py:199: UserWarning: Do not pass an `input_shape`/`input_dim` argument to a layer. When using Sequential models, prefer using an `Input(shape)` object as the first layer in the model instead.
+  super().__init__(**kwargs)
+=== Menjalankan C:\prediksi-lstm-ebt-react-app\audit\source_fixed\bs_tf_lstm_fix_fixed.py ===
+=== Working directory: C:\prediksi-lstm-ebt-react-app\audit\results\pipeline_run_baseline_timesplit ===
+
+Seluruh library berhasil diimpor.
+TensorFlow version: 2.19.0
+Informasi Dataset:
+<class 'pandas.core.frame.DataFrame'>
+RangeIndex: 252 entries, 0 to 251
+Data columns (total 5 columns):
+ #   Column     Non-Null Count  Dtype  
+---  ------     --------------  -----  
+ 0   Tanggal    252 non-null    object 
+ 1   Produksi   252 non-null    float64
+ 2   Kapasitas  252 non-null    float64
+ 3   Cuaca      252 non-null    float64
+ 4   Jenis      252 non-null    object 
+dtypes: float64(3), object(2)
+memory usage: 10.0+ KB
+Statistik Deskriptif Dataset:
+Jumlah Missing Value per Kolom:
+Tanggal      0
+Produksi     0
+Kapasitas    0
+Cuaca        0
+Jenis        0
+dtype: int64
+Distribusi Jumlah Data per Jenis PLT:
+Jenis
+PLT Hybrid    36
+PLTA          36
+PLTB          36
+PLTM          36
+PLTMH         36
+PLTS          36
+PLTS Atap     36
+Name: count, dtype: int64
+Jenis PLT yang akan diproses: ['PLT Hybrid' 'PLTA' 'PLTB' 'PLTM' 'PLTMH' 'PLTS' 'PLTS Atap']
+Normalisasi data selesai dilakukan untuk seluruh jenis PLT (scaler di-fit hanya pada porsi train+val 2023-2024, lihat FIX LEAKAGE #1 dan FIX SPLIT #1).
+Fungsi create_sequences() berhasil dibuat dengan window_size = 6 bulan.
+PLT Hybrid      -> Total sample:  30 | Train:  15 | Val:   3 | Test:  12
+PLTA            -> Total sample:  30 | Train:  15 | Val:   3 | Test:  12
+PLTB            -> Total sample:  30 | Train:  15 | Val:   3 | Test:  12
+PLTM            -> Total sample:  30 | Train:  15 | Val:   3 | Test:  12
+PLTMH           -> Total sample:  30 | Train:  15 | Val:   3 | Test:  12
+PLTS            -> Total sample:  30 | Train:  15 | Val:   3 | Test:  12
+PLTS Atap       -> Total sample:  30 | Train:  15 | Val:   3 | Test:  12
+Model: "sequential"
+┌─────────────────────────────────┬────────────────────────┬───────────────┐
+│ Layer (type)                    │ Output Shape           │       Param # │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ lstm (LSTM)                     │ (None, 6, 64)          │        16,896 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ dropout (Dropout)               │ (None, 6, 64)          │             0 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ lstm_1 (LSTM)                   │ (None, 32)             │        12,416 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ dropout_1 (Dropout)             │ (None, 32)             │             0 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ dense (Dense)                   │ (None, 1)              │            33 │
+└─────────────────────────────────┴────────────────────────┴───────────────┘
+ Total params: 29,345 (114.63 KB)
+ Trainable params: 29,345 (114.63 KB)
+ Non-trainable params: 0 (0.00 B)
+C:\prediksi-lstm-ebt-react-app\audit\source_fixed\bs_tf_lstm_fix_fixed.py:391: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown
+  plt.show()
+WARNING:tensorflow:5 out of the last 5 calls to <function TensorFlowTrainer.make_predict_function.<locals>.one_step_on_data_distributed at 0x000001FD3CF05620> triggered tf.function retracing. Tracing is expensive and the excessive number of tracings could be due to (1) creating @tf.function repeatedly in a loop, (2) passing tensors with different shapes, (3) passing Python objects instead of tensors. For (1), please define your @tf.function outside of the loop. For (2), @tf.function has reduce_retracing=True option that can avoid unnecessary retracing. For (3), please refer to https://www.tensorflow.org/guide/function#controlling_retracing and https://www.tensorflow.org/api_docs/python/tf/function for  more details.
+WARNING:tensorflow:6 out of the last 6 calls to <function TensorFlowTrainer.make_predict_function.<locals>.one_step_on_data_distributed at 0x000001FD3D8136A0> triggered tf.function retracing. Tracing is expensive and the excessive number of tracings could be due to (1) creating @tf.function repeatedly in a loop, (2) passing tensors with different shapes, (3) passing Python objects instead of tensors. For (1), please define your @tf.function outside of the loop. For (2), @tf.function has reduce_retracing=True option that can avoid unnecessary retracing. For (3), please refer to https://www.tensorflow.org/guide/function#controlling_retracing and https://www.tensorflow.org/api_docs/python/tf/function for  more details.
+C:\prediksi-lstm-ebt-react-app\audit\source_fixed\bs_tf_lstm_fix_fixed.py:461: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown
+  plt.show()
+C:\Users\LENOVO\AppData\Local\Programs\Python\Python312\Lib\site-packages\keras\src\layers\rnn\rnn.py:199: UserWarning: Do not pass an `input_shape`/`input_dim` argument to a layer. When using Sequential models, prefer using an `Input(shape)` object as the first layer in the model instead.
+  super().__init__(**kwargs)
+Callback EarlyStopping dan ReduceLROnPlateau berhasil disiapkan.
+
+=== Melatih Model Baseline LSTM untuk: PLT Hybrid ===
+Training selesai. Epoch berhenti pada epoch ke-17
+
+=== Melatih Model Baseline LSTM untuk: PLTA ===
+Training selesai. Epoch berhenti pada epoch ke-22
+
+=== Melatih Model Baseline LSTM untuk: PLTB ===
+Training selesai. Epoch berhenti pada epoch ke-15
+
+=== Melatih Model Baseline LSTM untuk: PLTM ===
+Training selesai. Epoch berhenti pada epoch ke-100
+
+=== Melatih Model Baseline LSTM untuk: PLTMH ===
+Training selesai. Epoch berhenti pada epoch ke-22
+
+=== Melatih Model Baseline LSTM untuk: PLTS ===
+Training selesai. Epoch berhenti pada epoch ke-93
+
+=== Melatih Model Baseline LSTM untuk: PLTS Atap ===
+Training selesai. Epoch berhenti pada epoch ke-18
+Prediksi untuk PLT Hybrid selesai. Jumlah data uji: 12
+Prediksi untuk PLTA selesai. Jumlah data uji: 12
+Prediksi untuk PLTB selesai. Jumlah data uji: 12
+Prediksi untuk PLTM selesai. Jumlah data uji: 12
+Prediksi untuk PLTMH selesai. Jumlah data uji: 12
+Prediksi untuk PLTS selesai. Jumlah data uji: 12
+Prediksi untuk PLTS Atap selesai. Jumlah data uji: 12
+PLT Hybrid      -> RMSE:    0.039 | MAE:    0.031 | MAPE:  13.46%
+PLTA            -> RMSE:    8.036 | MAE:    6.804 | MAPE:  20.94%
+PLTB            -> RMSE:   15.375 | MAE:   11.690 | MAPE:  19.20%
+PLTM            -> RMSE:    3.862 | MAE:    3.583 | MAPE:  12.14%
+PLTMH           -> RMSE:    4.172 | MAE:    3.521 | MAPE:  21.09%
+PLTS            -> RMSE:    0.233 | MAE:    0.183 | MAPE:  18.38%
+PLTS Atap       -> RMSE:    0.271 | MAE:    0.228 | MAPE:  24.76%
+Ringkasan Hasil Evaluasi Model Baseline LSTM per Jenis PLT:
+Total data uji gabungan (seluruh PLT) : 84
+RMSE Gabungan (Overall Baseline)      : 6.902
+Rata-rata RMSE per PLT (pembanding)   : 4.570
+Contoh Data Nasional:
+    Tanggal      Produksi  Kapasitas       Cuaca  Jenis
+0  1/1/2020  1.308593e+06    3584.07  363.779695   PLTA
+1  1/1/2020  2.108520e+02      10.34    5.699154   PLTB
+2  1/1/2020  1.820636e+04      22.12    5.699555   PLTM
+3  1/1/2020  1.317923e+04      36.20    5.257257  PLTMH
+4  1/1/2020  3.902360e+02      16.71    4.427661   PLTS
+
+Informasi Dataset Nasional:
+<class 'pandas.core.frame.DataFrame'>
+RangeIndex: 300 entries, 0 to 299
+Data columns (total 5 columns):
+ #   Column     Non-Null Count  Dtype  
+---  ------     --------------  -----  
+ 0   Tanggal    300 non-null    object 
+ 1   Produksi   300 non-null    float64
+ 2   Kapasitas  300 non-null    float64
+ 3   Cuaca      300 non-null    float64
+ 4   Jenis      300 non-null    object 
+dtypes: float64(3), object(2)
+memory usage: 11.8+ KB
+
+Jumlah Data per Jenis PLT (Nasional):
+Jenis
+PLTA     60
+PLTB     60
+PLTM     60
+PLTMH    60
+PLTS     60
+Name: count, dtype: int64
+
+Jumlah Missing Value per Kolom:
+Tanggal      0
+Produksi     0
+Kapasitas    0
+Cuaca        0
+Jenis        0
+dtype: int64
+
+Statistik Deskriptif Dataset Nasional:
+         Tanggal      Produksi    Kapasitas       Cuaca Jenis
+count        300  3.000000e+02   300.000000  300.000000   300
+unique        60           NaN          NaN         NaN     5
+top     1/1/2020           NaN          NaN         NaN  PLTA
+freq           5           NaN          NaN         NaN    60
+mean         NaN  1.979620e+05   734.552800   64.175577   NaN
+std          NaN  3.775792e+05  1341.319317  122.570434   NaN
+min          NaN  1.353061e+02    10.340000    3.247223   NaN
+25%          NaN  8.360644e+02    25.760000    3.850577   NaN
+50%          NaN  9.258510e+03    36.200000    5.213233   NaN
+75%          NaN  1.064863e+05   409.430000    6.558281   NaN
+max          NaN  1.409939e+06  3584.070000  395.959273   NaN
+Jenis PLT pada dataset nasional: ['PLTA' 'PLTB' 'PLTM' 'PLTMH' 'PLTS']
+Normalisasi data nasional selesai dilakukan untuk seluruh jenis PLT.
+PLTA     -> Total sequence terbentuk: 54
+PLTB     -> Total sequence terbentuk: 54
+PLTM     -> Total sequence terbentuk: 54
+PLTMH    -> Total sequence terbentuk: 54
+PLTS     -> Total sequence terbentuk: 54
+PLTA     -> Train (2020-2023):  42 | Validasi (2024):  12
+PLTB     -> Train (2020-2023):  42 | Validasi (2024):  12
+PLTM     -> Train (2020-2023):  42 | Validasi (2024):  12
+PLTMH    -> Train (2020-2023):  42 | Validasi (2024):  12
+PLTS     -> Train (2020-2023):  42 | Validasi (2024):  12
+Model: "sequential_8"
+┌─────────────────────────────────┬────────────────────────┬───────────────┐
+│ Layer (type)                    │ Output Shape           │       Param # │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ lstm_16 (LSTM)                  │ (None, 6, 64)          │        17,408 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ dropout_16 (Dropout)            │ (None, 6, 64)          │             0 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ lstm_17 (LSTM)                  │ (None, 32)             │        12,416 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ dropout_17 (Dropout)            │ (None, 32)             │             0 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ dense_8 (Dense)                 │ (None, 1)              │            33 │
+└─────────────────────────────────┴────────────────────────┴───────────────┘
+ Total params: 29,857 (116.63 KB)
+ Trainable params: 29,857 (116.63 KB)
+ Non-trainable params: 0 (0.00 B)
+C:\prediksi-lstm-ebt-react-app\audit\source_fixed\bs_tf_lstm_fix_fixed.py:742: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown
+  plt.show()
+C:\prediksi-lstm-ebt-react-app\audit\source_fixed\bs_tf_lstm_fix_fixed.py:812: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown
+  plt.show()
+C:\Users\LENOVO\AppData\Local\Programs\Python\Python312\Lib\site-packages\keras\src\layers\rnn\rnn.py:199: UserWarning: Do not pass an `input_shape`/`input_dim` argument to a layer. When using Sequential models, prefer using an `Input(shape)` object as the first layer in the model instead.
+  super().__init__(**kwargs)
+C:\prediksi-lstm-ebt-react-app\audit\source_fixed\bs_tf_lstm_fix_fixed.py:1112: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown
+  plt.show()
+C:\prediksi-lstm-ebt-react-app\audit\source_fixed\bs_tf_lstm_fix_fixed.py:1180: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown
+  plt.show()
+C:\Users\LENOVO\AppData\Local\Programs\Python\Python312\Lib\site-packages\keras\src\layers\rnn\rnn.py:199: UserWarning: Do not pass an `input_shape`/`input_dim` argument to a layer. When using Sequential models, prefer using an `Input(shape)` object as the first layer in the model instead.
+  super().__init__(**kwargs)
+C:\prediksi-lstm-ebt-react-app\audit\source_fixed\bs_tf_lstm_fix_fixed.py:1378: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown
+  plt.show()
+C:\prediksi-lstm-ebt-react-app\audit\source_fixed\bs_tf_lstm_fix_fixed.py:1446: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown
+  plt.show()
+C:\Users\LENOVO\AppData\Local\Programs\Python\Python312\Lib\site-packages\keras\src\layers\rnn\rnn.py:199: UserWarning: Do not pass an `input_shape`/`input_dim` argument to a layer. When using Sequential models, prefer using an `Input(shape)` object as the first layer in the model instead.
+  super().__init__(**kwargs)
+C:\prediksi-lstm-ebt-react-app\audit\source_fixed\bs_tf_lstm_fix_fixed.py:1700: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown
+  plt.show()
+C:\prediksi-lstm-ebt-react-app\audit\source_fixed\bs_tf_lstm_fix_fixed.py:1768: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown
+  plt.show()
+C:\Users\LENOVO\AppData\Local\Programs\Python\Python312\Lib\site-packages\keras\src\layers\rnn\rnn.py:199: UserWarning: Do not pass an `input_shape`/`input_dim` argument to a layer. When using Sequential models, prefer using an `Input(shape)` object as the first layer in the model instead.
+  super().__init__(**kwargs)
+C:\prediksi-lstm-ebt-react-app\audit\source_fixed\bs_tf_lstm_fix_fixed.py:1926: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown
+  plt.show()
+C:\prediksi-lstm-ebt-react-app\audit\source_fixed\bs_tf_lstm_fix_fixed.py:1994: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown
+  plt.show()
+Callback EarlyStopping dan ReduceLROnPlateau siap digunakan untuk proses pre-training.
+
+=== Pre-Training Model untuk: PLTA ===
+Pre-training selesai. Epoch berhenti pada epoch ke-100
+
+=== Pre-Training Model untuk: PLTB ===
+Pre-training selesai. Epoch berhenti pada epoch ke-15
+
+=== Pre-Training Model untuk: PLTM ===
+Pre-training selesai. Epoch berhenti pada epoch ke-62
+
+=== Pre-Training Model untuk: PLTMH ===
+Pre-training selesai. Epoch berhenti pada epoch ke-82
+
+=== Pre-Training Model untuk: PLTS ===
+Pre-training selesai. Epoch berhenti pada epoch ke-100
+Prediksi untuk PLTA selesai. Jumlah data validasi: 12
+Prediksi untuk PLTB selesai. Jumlah data validasi: 12
+Prediksi untuk PLTM selesai. Jumlah data validasi: 12
+Prediksi untuk PLTMH selesai. Jumlah data validasi: 12
+Prediksi untuk PLTS selesai. Jumlah data validasi: 12
+PLTA     -> RMSE: 80666.490 | MAE: 71689.658 | MAPE:   8.93%
+PLTB     -> RMSE:  363.367 | MAE:  275.649 | MAPE:  18.42%
+PLTM     -> RMSE: 24443.258 | MAE: 20508.362 | MAPE:  15.35%
+PLTMH    -> RMSE: 1368.236 | MAE: 1175.072 | MAPE:   9.11%
+PLTS     -> RMSE:  166.129 | MAE:  132.801 | MAPE:  11.92%
+Ringkasan Hasil Evaluasi Pre-Training (Data Nasional) per Jenis PLT:
+Contoh Data Regional:
+    Tanggal  Produksi  Kapasitas    Cuaca       Jenis
+0  1/1/2023  0.210145      1.704  4.20015  PLT Hybrid
+1  2/1/2023  0.209060      1.704  4.05675  PLT Hybrid
+2  3/1/2023  0.183662      1.704  3.94565  PLT Hybrid
+3  4/1/2023  0.181591      1.704  3.87050  PLT Hybrid
+4  5/1/2023  0.200907      1.704  4.14290  PLT Hybrid
+
+Informasi Dataset Regional:
+<class 'pandas.core.frame.DataFrame'>
+RangeIndex: 252 entries, 0 to 251
+Data columns (total 5 columns):
+ #   Column     Non-Null Count  Dtype  
+---  ------     --------------  -----  
+ 0   Tanggal    252 non-null    object 
+ 1   Produksi   252 non-null    float64
+ 2   Kapasitas  252 non-null    float64
+ 3   Cuaca      252 non-null    float64
+ 4   Jenis      252 non-null    object 
+dtypes: float64(3), object(2)
+memory usage: 10.0+ KB
+
+Jumlah Data per Jenis PLT (Regional):
+Jenis
+PLT Hybrid    36
+PLTA          36
+PLTB          36
+PLTM          36
+PLTMH         36
+PLTS          36
+PLTS Atap     36
+Name: count, dtype: int64
+
+Jumlah Missing Value per Kolom:
+Tanggal      0
+Produksi     0
+Kapasitas    0
+Cuaca        0
+Jenis        0
+dtype: int64
+
+Statistik Deskriptif Dataset Regional:
+         Tanggal    Produksi   Kapasitas       Cuaca       Jenis
+count        252  252.000000  252.000000  252.000000         252
+unique        36         NaN         NaN         NaN           7
+top     1/1/2023         NaN         NaN         NaN  PLT Hybrid
+freq           7         NaN         NaN         NaN          36
+mean         NaN   18.551806  135.274381   97.251143         NaN
+std          NaN   18.873746  231.960125  110.878622         NaN
+min          NaN    0.020060    0.190000    2.400000         NaN
+25%          NaN    0.730567    5.140000    4.296238         NaN
+50%          NaN   18.213441   39.660000    6.279000         NaN
+75%          NaN   32.708280  130.000000  212.750000         NaN
+max          NaN   73.463348  709.600000  290.000000         NaN
+Jenis PLT pada dataset regional: ['PLT Hybrid' 'PLTA' 'PLTB' 'PLTM' 'PLTMH' 'PLTS' 'PLTS Atap']
+Normalisasi data regional selesai dilakukan untuk seluruh jenis PLT.
+PLT Hybrid   -> Total sequence terbentuk: 30
+PLTA         -> Total sequence terbentuk: 30
+PLTB         -> Total sequence terbentuk: 30
+PLTM         -> Total sequence terbentuk: 30
+PLTMH        -> Total sequence terbentuk: 30
+PLTS         -> Total sequence terbentuk: 30
+PLTS Atap    -> Total sequence terbentuk: 30
+PLT Hybrid   -> Train FT:  15 | Val FT:   3 | Test 2025:  12
+PLTA         -> Train FT:  15 | Val FT:   3 | Test 2025:  12
+PLTB         -> Train FT:  15 | Val FT:   3 | Test 2025:  12
+PLTM         -> Train FT:  15 | Val FT:   3 | Test 2025:  12
+PLTMH        -> Train FT:  15 | Val FT:   3 | Test 2025:  12
+PLTS         -> Train FT:  15 | Val FT:   3 | Test 2025:  12
+PLTS Atap    -> Train FT:  15 | Val FT:   3 | Test 2025:  12
+
+=== Fine-Tuning (Transfer Learning) untuk: PLTA ===
+Fine-Tuning selesai. Epoch berhenti pada epoch ke-22
+
+=== Fine-Tuning (Transfer Learning) untuk: PLTB ===
+Fine-Tuning selesai. Epoch berhenti pada epoch ke-11
+
+=== Fine-Tuning (Transfer Learning) untuk: PLTM ===
+Fine-Tuning selesai. Epoch berhenti pada epoch ke-52
+
+=== Fine-Tuning (Transfer Learning) untuk: PLTMH ===
+Fine-Tuning selesai. Epoch berhenti pada epoch ke-63
+
+=== Fine-Tuning (Transfer Learning) untuk: PLTS ===
+Fine-Tuning selesai. Epoch berhenti pada epoch ke-39
+
+=== Direct Training (Tanpa Transfer Learning) untuk: PLTS Atap ===
+Direct Training selesai. Epoch berhenti pada epoch ke-35
+
+=== Direct Training (Tanpa Transfer Learning) untuk: PLT Hybrid ===
+Direct Training selesai. Epoch berhenti pada epoch ke-100
+Callback EarlyStopping dan ReduceLROnPlateau digunakan untuk seluruh proses training pada Tahap 2.
+Prediksi untuk PLTA selesai. Jumlah data uji (2025): 12
+Prediksi untuk PLTB selesai. Jumlah data uji (2025): 12
+Prediksi untuk PLTM selesai. Jumlah data uji (2025): 12
+Prediksi untuk PLTMH selesai. Jumlah data uji (2025): 12
+Prediksi untuk PLTS selesai. Jumlah data uji (2025): 12
+Prediksi untuk PLTS Atap selesai. Jumlah data uji (2025): 12
+Prediksi untuk PLT Hybrid selesai. Jumlah data uji (2025): 12
+PLTA         -> RMSE:    3.277 | MAE:    2.510 | MAPE:   8.70%
+PLTB         -> RMSE:   13.046 | MAE:   11.032 | MAPE:  23.02%
+PLTM         -> RMSE:    3.518 | MAE:    2.917 | MAPE:  11.16%
+PLTMH        -> RMSE:    2.053 | MAE:    1.851 | MAPE:  11.28%
+PLTS         -> RMSE:    0.126 | MAE:    0.104 | MAPE:  12.13%
+PLTS Atap    -> RMSE:    0.292 | MAE:    0.246 | MAPE:  27.00%
+PLT Hybrid   -> RMSE:    0.029 | MAE:    0.025 | MAPE:  11.32%
+Ringkasan Hasil Evaluasi Fine-Tuning (Data Regional 2025) per Jenis PLT:
+Tabel Perbandingan Baseline LSTM vs Fine-Tuning (Transfer Learning) per Jenis PLT:
+Learning rate Fine-Tuning : 0.0001
+Learning rate Iterasi 1   : 5e-05
+Dataset regional (hasil preprocessing Fine-Tuning) digunakan kembali untuk Iterasi 1.
+Jenis PLT yang tersedia: ['PLTA', 'PLTB', 'PLTM', 'PLTMH', 'PLTS', 'PLTS Atap', 'PLT Hybrid']
+Sliding window yang digunakan tetap konsisten: WINDOW_SIZE = 6 bulan.
+PLTA         -> Train:  15 | Val:   3 | Test 2025:  12
+PLTB         -> Train:  15 | Val:   3 | Test 2025:  12
+PLTM         -> Train:  15 | Val:   3 | Test 2025:  12
+PLTMH        -> Train:  15 | Val:   3 | Test 2025:  12
+PLTS         -> Train:  15 | Val:   3 | Test 2025:  12
+PLTS Atap    -> Train:  15 | Val:   3 | Test 2025:  12
+PLT Hybrid   -> Train:  15 | Val:   3 | Test 2025:  12
+
+=== Iterasi 1 (Transfer Learning) untuk: PLTA ===
+Iterasi 1 selesai. Epoch berhenti pada epoch ke-30
+
+=== Iterasi 1 (Transfer Learning) untuk: PLTB ===
+Iterasi 1 selesai. Epoch berhenti pada epoch ke-11
+
+=== Iterasi 1 (Transfer Learning) untuk: PLTM ===
+Iterasi 1 selesai. Epoch berhenti pada epoch ke-100
+
+=== Iterasi 1 (Transfer Learning) untuk: PLTMH ===
+Iterasi 1 selesai. Epoch berhenti pada epoch ke-100
+
+=== Iterasi 1 (Transfer Learning) untuk: PLTS ===
+Iterasi 1 selesai. Epoch berhenti pada epoch ke-80
+
+=== Iterasi 1 (Direct Training) untuk: PLTS Atap ===
+Iterasi 1 selesai. Epoch berhenti pada epoch ke-100
+
+=== Iterasi 1 (Direct Training) untuk: PLT Hybrid ===
+Iterasi 1 selesai. Epoch berhenti pada epoch ke-100
+Prediksi Iterasi 1 untuk PLTA selesai. Jumlah data uji (2025): 12
+Prediksi Iterasi 1 untuk PLTB selesai. Jumlah data uji (2025): 12
+Prediksi Iterasi 1 untuk PLTM selesai. Jumlah data uji (2025): 12
+Prediksi Iterasi 1 untuk PLTMH selesai. Jumlah data uji (2025): 12
+Prediksi Iterasi 1 untuk PLTS selesai. Jumlah data uji (2025): 12
+Prediksi Iterasi 1 untuk PLTS Atap selesai. Jumlah data uji (2025): 12
+Prediksi Iterasi 1 untuk PLT Hybrid selesai. Jumlah data uji (2025): 12
+PLTA         -> RMSE:    3.253 | MAE:    2.523 | MAPE:   8.68%
+PLTB         -> RMSE:   12.982 | MAE:   11.006 | MAPE:  22.91%
+C:\prediksi-lstm-ebt-react-app\audit\source_fixed\bs_tf_lstm_fix_fixed.py:2264: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown
+  plt.show()
+C:\prediksi-lstm-ebt-react-app\audit\source_fixed\bs_tf_lstm_fix_fixed.py:2288: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown
+  plt.show()
+C:\Users\LENOVO\AppData\Local\Programs\Python\Python312\Lib\site-packages\keras\src\layers\rnn\rnn.py:199: UserWarning: Do not pass an `input_shape`/`input_dim` argument to a layer. When using Sequential models, prefer using an `Input(shape)` object as the first layer in the model instead.
+  super().__init__(**kwargs)
+C:\Users\LENOVO\AppData\Local\Programs\Python\Python312\Lib\site-packages\keras\src\callbacks\early_stopping.py:153: UserWarning: Early stopping conditioned on metric `val_loss` which is not available. Available metrics are: loss,mae
+  current = self.get_monitor_value(logs)
+C:\Users\LENOVO\AppData\Local\Programs\Python\Python312\Lib\site-packages\keras\src\callbacks\callback_list.py:145: UserWarning: Learning rate reduction is conditioned on metric `val_loss` which is not available. Available metrics are: loss,mae,learning_rate.
+  callback.on_epoch_end(epoch, logs)
+PLTM         -> RMSE:    3.518 | MAE:    2.906 | MAPE:  11.17%
+PLTMH        -> RMSE:    2.088 | MAE:    1.899 | MAPE:  11.50%
+PLTS         -> RMSE:    0.126 | MAE:    0.104 | MAPE:  12.18%
+PLTS Atap    -> RMSE:    0.236 | MAE:    0.185 | MAPE:  17.68%
+PLT Hybrid   -> RMSE:    0.040 | MAE:    0.030 | MAPE:  12.89%
+Ringkasan Hasil Evaluasi Iterasi 1 (Learning Rate = 0.00005) per Jenis PLT:
+Tabel Perbandingan Fine-Tuning vs Hyperparameter Tuning Iterasi 1:
+(Nilai positif pada kolom Selisih/Perubahan RMSE berarti Iterasi 1 lebih baik dari Fine-Tuning)
+Window size Iterasi 1 : 6 bulan
+Window size Iterasi 2 : 12 bulan
+Learning rate (tetap) : 5e-05
+Data regional ternormalisasi (MinMaxScaler regional) digunakan kembali untuk Iterasi 2.
+Jenis PLT yang tersedia: ['PLTA', 'PLTB', 'PLTM', 'PLTMH', 'PLTS', 'PLTS Atap', 'PLT Hybrid']
+PLTA         -> Total sequence (window=12) terbentuk: 24
+PLTB         -> Total sequence (window=12) terbentuk: 24
+PLTM         -> Total sequence (window=12) terbentuk: 24
+PLTMH        -> Total sequence (window=12) terbentuk: 24
+PLTS         -> Total sequence (window=12) terbentuk: 24
+PLTS Atap    -> Total sequence (window=12) terbentuk: 24
+PLT Hybrid   -> Total sequence (window=12) terbentuk: 24
+PLTA         -> Train:  10 | Val:   2 | Test 2025:  12
+PLTB         -> Train:  10 | Val:   2 | Test 2025:  12
+PLTM         -> Train:  10 | Val:   2 | Test 2025:  12
+PLTMH        -> Train:  10 | Val:   2 | Test 2025:  12
+PLTS         -> Train:  10 | Val:   2 | Test 2025:  12
+PLTS Atap    -> Train:  10 | Val:   2 | Test 2025:  12
+PLT Hybrid   -> Train:  10 | Val:   2 | Test 2025:  12
+
+=== Iterasi 2 (Transfer Learning, Window=12) untuk: PLTA ===
+Iterasi 2 selesai. Epoch berhenti pada epoch ke-100
+
+=== Iterasi 2 (Transfer Learning, Window=12) untuk: PLTB ===
+Iterasi 2 selesai. Epoch berhenti pada epoch ke-100
+
+=== Iterasi 2 (Transfer Learning, Window=12) untuk: PLTM ===
+Iterasi 2 selesai. Epoch berhenti pada epoch ke-100
+
+=== Iterasi 2 (Transfer Learning, Window=12) untuk: PLTMH ===
+Iterasi 2 selesai. Epoch berhenti pada epoch ke-100
+
+=== Iterasi 2 (Transfer Learning, Window=12) untuk: PLTS ===
+Iterasi 2 selesai. Epoch berhenti pada epoch ke-21
+
+=== Iterasi 2 (Direct Training, Window=12) untuk: PLTS Atap ===
+Iterasi 2 selesai. Epoch berhenti pada epoch ke-99
+
+=== Iterasi 2 (Direct Training, Window=12) untuk: PLT Hybrid ===
+Iterasi 2 selesai. Epoch berhenti pada epoch ke-73
+Prediksi Iterasi 2 untuk PLTA selesai. Jumlah data uji (2025): 12
+Prediksi Iterasi 2 untuk PLTB selesai. Jumlah data uji (2025): 12
+Prediksi Iterasi 2 untuk PLTM selesai. Jumlah data uji (2025): 12
+Prediksi Iterasi 2 untuk PLTMH selesai. Jumlah data uji (2025): 12
+Prediksi Iterasi 2 untuk PLTS selesai. Jumlah data uji (2025): 12
+Prediksi Iterasi 2 untuk PLTS Atap selesai. Jumlah data uji (2025): 12
+Prediksi Iterasi 2 untuk PLT Hybrid selesai. Jumlah data uji (2025): 12
+PLTA         -> RMSE:   11.072 | MAE:    9.700 | MAPE:  30.66%
+PLTB         -> RMSE:   14.502 | MAE:   12.587 | MAPE:  27.08%
+PLTM         -> RMSE:    6.434 | MAE:    4.928 | MAPE:  15.66%
+PLTMH        -> RMSE:    5.904 | MAE:    5.219 | MAPE:  30.77%
+PLTS         -> RMSE:    0.167 | MAE:    0.109 | MAPE:  12.67%
+PLTS Atap    -> RMSE:    0.267 | MAE:    0.232 | MAPE:  25.40%
+PLT Hybrid   -> RMSE:    0.038 | MAE:    0.027 | MAPE:  11.36%
+Ringkasan Hasil Evaluasi Iterasi 2 (Window Size = 12 Bulan) per Jenis PLT:
+Window size Iterasi 3 : 6 bulan (mengikuti Iterasi 1)
+Learning rate Iterasi 3 : 5e-05 (mengikuti Iterasi 1)
+Dropout Iterasi 3 : 0.3 (naik dari 0.20)
+Dataset regional (window=6, hasil split Fine-Tuning/Iterasi 1) digunakan kembali untuk Iterasi 3.
+PLTA         -> Train:  15 | Val:   3 | Test 2025:  12
+PLTB         -> Train:  15 | Val:   3 | Test 2025:  12
+PLTM         -> Train:  15 | Val:   3 | Test 2025:  12
+PLTMH        -> Train:  15 | Val:   3 | Test 2025:  12
+PLTS         -> Train:  15 | Val:   3 | Test 2025:  12
+PLTS Atap    -> Train:  15 | Val:   3 | Test 2025:  12
+PLT Hybrid   -> Train:  15 | Val:   3 | Test 2025:  12
+
+=== Iterasi 3 (Transfer Learning, Dropout=0.30) untuk: PLTA ===
+Iterasi 3 selesai. Epoch berhenti pada epoch ke-34
+
+=== Iterasi 3 (Transfer Learning, Dropout=0.30) untuk: PLTB ===
+Iterasi 3 selesai. Epoch berhenti pada epoch ke-11
+
+=== Iterasi 3 (Transfer Learning, Dropout=0.30) untuk: PLTM ===
+Iterasi 3 selesai. Epoch berhenti pada epoch ke-100
+
+=== Iterasi 3 (Transfer Learning, Dropout=0.30) untuk: PLTMH ===
+Iterasi 3 selesai. Epoch berhenti pada epoch ke-100
+
+=== Iterasi 3 (Transfer Learning, Dropout=0.30) untuk: PLTS ===
+Iterasi 3 selesai. Epoch berhenti pada epoch ke-100
+
+=== Iterasi 3 (Direct Training, Dropout=0.30) untuk: PLTS Atap ===
+Iterasi 3 selesai. Epoch berhenti pada epoch ke-100
+
+=== Iterasi 3 (Direct Training, Dropout=0.30) untuk: PLT Hybrid ===
+Iterasi 3 selesai. Epoch berhenti pada epoch ke-100
+Prediksi Iterasi 3 untuk PLTA selesai. Jumlah data uji (2025): 12
+Prediksi Iterasi 3 untuk PLTB selesai. Jumlah data uji (2025): 12
+Prediksi Iterasi 3 untuk PLTM selesai. Jumlah data uji (2025): 12
+Prediksi Iterasi 3 untuk PLTMH selesai. Jumlah data uji (2025): 12
+Prediksi Iterasi 3 untuk PLTS selesai. Jumlah data uji (2025): 12
+Prediksi Iterasi 3 untuk PLTS Atap selesai. Jumlah data uji (2025): 12
+Prediksi Iterasi 3 untuk PLT Hybrid selesai. Jumlah data uji (2025): 12
+PLTA         -> RMSE:    3.240 | MAE:    2.503 | MAPE:   8.62%
+PLTB         -> RMSE:   12.983 | MAE:   11.006 | MAPE:  22.91%
+PLTM         -> RMSE:    3.588 | MAE:    2.940 | MAPE:  11.39%
+PLTMH        -> RMSE:    2.198 | MAE:    2.018 | MAPE:  12.06%
+PLTS         -> RMSE:    0.126 | MAE:    0.104 | MAPE:  12.21%
+PLTS Atap    -> RMSE:    0.217 | MAE:    0.170 | MAPE:  16.92%
+PLT Hybrid   -> RMSE:    0.042 | MAE:    0.031 | MAPE:  13.05%
+Ringkasan Hasil Evaluasi Iterasi 3 (Dropout = 0.30) per Jenis PLT:
+PLTA         -> RMSE:    3.240 | MAE:    2.503 | MAPE:   8.62%
+PLTB         -> RMSE:   12.983 | MAE:   11.006 | MAPE:  22.91%
+PLTM         -> RMSE:    3.588 | MAE:    2.940 | MAPE:  11.39%
+PLTMH        -> RMSE:    2.198 | MAE:    2.018 | MAPE:  12.06%
+PLTS         -> RMSE:    0.126 | MAE:    0.104 | MAPE:  12.21%
+PLTS Atap    -> RMSE:    0.217 | MAE:    0.170 | MAPE:  16.92%
+PLT Hybrid   -> RMSE:    0.042 | MAE:    0.031 | MAPE:  13.05%
+Ringkasan Hasil Evaluasi Iterasi 3 (Dropout = 0.30) per Jenis PLT:
+Tabel Perbandingan Lengkap: Baseline vs Fine-Tuning vs Iterasi 1 vs Iterasi 2 vs Iterasi 3
+(PLTS Atap & PLT Hybrid tidak memiliki nilai Baseline karena tidak tersedia pada data nasional)
+1. Hasil Evaluasi Baseline LSTM:
+    Jenis_PLT       RMSE        MAE       MAPE
+0  PLT Hybrid   0.038561   0.030611  13.459644
+1        PLTS   0.232643   0.182592  18.382157
+2   PLTS Atap   0.270942   0.228340  24.760049
+3        PLTM   3.862249   3.583162  12.136025
+4       PLTMH   4.172153   3.521106  21.094418
+5        PLTA   8.036311   6.804130  20.940708
+6        PLTB  15.374868  11.690391  19.199344
+
+2. Hasil Evaluasi Fine-Tuning (Transfer Learning):
+    Jenis_PLT       RMSE        MAE       MAPE             Metode
+0  PLT Hybrid   0.029164   0.024663  11.322603    Direct Training
+1        PLTS   0.125805   0.103791  12.133145  Transfer Learning
+2   PLTS Atap   0.291795   0.246354  27.004380    Direct Training
+3       PLTMH   2.053073   1.851470  11.277297  Transfer Learning
+4        PLTA   3.277322   2.510388   8.695805  Transfer Learning
+5        PLTM   3.518390   2.916903  11.160290  Transfer Learning
+6        PLTB  13.045681  11.032004  23.019811  Transfer Learning
+
+3. Hasil Evaluasi Iterasi 1 (Learning Rate = 0.00005):
+C:\prediksi-lstm-ebt-react-app\audit\source_fixed\bs_tf_lstm_fix_fixed.py:2945: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown
+  plt.show()
+C:\prediksi-lstm-ebt-react-app\audit\source_fixed\bs_tf_lstm_fix_fixed.py:2958: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown
+  plt.show()
+C:\prediksi-lstm-ebt-react-app\audit\source_fixed\bs_tf_lstm_fix_fixed.py:2995: UserWarning: FigureCanvasAgg is non-interactive, and thus cannot be shown
+  plt.show()
+    Jenis_PLT       RMSE        MAE       MAPE             Metode
+0  PLT Hybrid   0.040010   0.030127  12.886930    Direct Training
+1        PLTS   0.126159   0.104016  12.175638  Transfer Learning
+2   PLTS Atap   0.236241   0.184562  17.684593    Direct Training
+3       PLTMH   2.088357   1.899311  11.499094  Transfer Learning
+4        PLTA   3.253293   2.523363   8.681391  Transfer Learning
+5        PLTM   3.518386   2.906288  11.169829  Transfer Learning
+6        PLTB  12.982134  11.005603  22.905710  Transfer Learning
+
+4. Hasil Evaluasi Iterasi 2 (Window Size = 12):
+    Jenis_PLT       RMSE        MAE       MAPE             Metode
+0  PLT Hybrid   0.038001   0.027180  11.355442    Direct Training
+1        PLTS   0.167098   0.109058  12.673756  Transfer Learning
+2   PLTS Atap   0.266775   0.232025  25.403032    Direct Training
+3       PLTMH   5.904264   5.219001  30.774192  Transfer Learning
+4        PLTM   6.434442   4.927703  15.663362  Transfer Learning
+5        PLTA  11.072039   9.699799  30.659392  Transfer Learning
+6        PLTB  14.502121  12.587173  27.083202  Transfer Learning
+
+5. Hasil Evaluasi Iterasi 3 (Dropout = 0.30):
+    Jenis_PLT       RMSE        MAE       MAPE             Metode
+0  PLT Hybrid   0.041639   0.030786  13.052620    Direct Training
+1        PLTS   0.126324   0.104243  12.213966  Transfer Learning
+2   PLTS Atap   0.216838   0.169896  16.922310    Direct Training
+3       PLTMH   2.197593   2.018396  12.057720  Transfer Learning
+4        PLTA   3.240381   2.503397   8.622031  Transfer Learning
+5        PLTM   3.588477   2.940277  11.388161  Transfer Learning
+6        PLTB  12.983481  11.006461  22.908950  Transfer Learning
+DataFrame Perbandingan Seluruh Model (RMSE, MAE, MAPE) per Jenis PLT:
+Ringkasan Rata-Rata Performa Seluruh Model:
+Model Terbaik (berdasarkan Average RMSE terkecil): Iterasi1
+  - Average RMSE : 3.178
+  - Average MAE  : 2.665  (informasi pendukung)
+  - Average MAPE : 13.86%  (informasi pendukung)
+Model Terbaik untuk Setiap Jenis PLT (berdasarkan RMSE terkecil):
+Konfigurasi Hyperparameter Model Terbaik (Iterasi1):
+  - Metode         : Transfer Learning (PLTA,PLTB,PLTM,PLTMH,PLTS) / Direct Training (PLTS Atap, PLT Hybrid)
+  - Window_Size    : 6
+  - Learning_Rate  : 5e-05
+  - Dropout        : 0.2
+  - Batch_Size     : 8
+  - Epochs         : 100
+  - Optimizer      : Adam
+  - Callback       : EarlyStopping, ReduceLROnPlateau
+============================================================
+KESIMPULAN: MODEL TERBAIK PENELITIAN
+============================================================
+
+Model yang dipilih sebagai Model Terbaik Penelitian adalah: Iterasi1
+
+Alasan pemilihan:
+  1. Iterasi1 memiliki rata-rata RMSE terkecil di antara seluruh model
+     yang diuji, yaitu 3.178 (kriteria utama pemilihan).
+  2. Sebagai informasi pendukung, Iterasi1 memiliki rata-rata MAE sebesar
+     2.665 dan rata-rata MAPE sebesar 13.86%.
+  3. Dibandingkan dengan Baseline LSTM (Average RMSE = 4.570),
+     model ini menurunkan RMSE sebesar 30.46%.
+
+Konfigurasi hyperparameter model terbaik (Iterasi1):
+  - Metode         : Transfer Learning (PLTA,PLTB,PLTM,PLTMH,PLTS) / Direct Training (PLTS Atap, PLT Hybrid)
+  - Window_Size    : 6
+  - Learning_Rate  : 5e-05
+  - Dropout        : 0.2
+  - Batch_Size     : 8
+  - Epochs         : 100
+  - Optimizer      : Adam
+  - Callback       : EarlyStopping, ReduceLROnPlateau
+
+Catatan: hasil ini akan digunakan sebagai acuan konfigurasi pada tahap
+pelatihan Model Final (belum dilakukan pada tahap ini).
+============================================================
+Folder 'model_final/' siap digunakan untuk menyimpan model, scaler, dan metadata.
+Model terbaik untuk setiap jenis PLT (hasil tahap Penentuan Model Terbaik):
+    Jenis_PLT Model_Terbaik  RMSE_Terbaik
+0  PLT Hybrid    FineTuning      0.029164
+1        PLTS    FineTuning      0.125805
+2   PLTS Atap      Iterasi3      0.216838
+3       PLTMH    FineTuning      2.053073
+4        PLTA      Iterasi3      3.240381
+5        PLTM      Iterasi1      3.518386
+6        PLTB      Iterasi1     12.982134
+
+Metode pelatihan Model Final per jenis PLT:
+  - PLTA        : Transfer Learning
+  - PLTB        : Transfer Learning
+  - PLTM        : Direct Training
+  - PLTMH       : Transfer Learning
+  - PLTS        : Transfer Learning
+  - PLTS Atap   : Direct Training
+  - PLT Hybrid  : Direct Training
+Model terbaik untuk setiap jenis PLT (hasil tahap Penentuan Model Terbaik):
+    Jenis_PLT Model_Terbaik  RMSE_Terbaik
+0  PLT Hybrid    FineTuning      0.029164
+1        PLTS    FineTuning      0.125805
+2   PLTS Atap      Iterasi3      0.216838
+3       PLTMH    FineTuning      2.053073
+4        PLTA      Iterasi3      3.240381
+5        PLTM      Iterasi1      3.518386
+6        PLTB      Iterasi1     12.982134
+
+Metode pelatihan Model Final per jenis PLT:
+  - PLTA        : Transfer Learning
+  - PLTB        : Transfer Learning
+  - PLTM        : Direct Training
+  - PLTMH       : Transfer Learning
+  - PLTS        : Transfer Learning
+  - PLTS Atap   : Direct Training
+  - PLT Hybrid  : Direct Training
+Menggunakan df_regional yang sudah dipreprocessing (urut jenis PLT & tanggal).
+Fitur input : ['Cuaca', 'Kapasitas']
+Target      : Produksi
+PLTA         -> Total data (2023-2025): 36
+PLTB         -> Total data (2023-2025): 36
+PLTM         -> Total data (2023-2025): 36
+PLTMH        -> Total data (2023-2025): 36
+PLTS         -> Total data (2023-2025): 36
+PLTS Atap    -> Total data (2023-2025): 36
+PLT Hybrid   -> Total data (2023-2025): 36
+PLTA         -> Total sequence (window=6) untuk pelatihan final: 30
+PLTB         -> Total sequence (window=6) untuk pelatihan final: 30
+PLTM         -> Total sequence (window=6) untuk pelatihan final: 30
+PLTMH        -> Total sequence (window=6) untuk pelatihan final: 30
+PLTS         -> Total sequence (window=6) untuk pelatihan final: 30
+PLTS Atap    -> Total sequence (window=6) untuk pelatihan final: 30
+PLT Hybrid   -> Total sequence (window=6) untuk pelatihan final: 30
+
+=== Melatih Model Final (Transfer Learning) untuk: PLTA ===
+Pelatihan Model Final untuk PLTA selesai.
+
+=== Melatih Model Final (Transfer Learning) untuk: PLTB ===
+Pelatihan Model Final untuk PLTB selesai.
+
+=== Melatih Model Final (Transfer Learning) untuk: PLTMH ===
+Pelatihan Model Final untuk PLTMH selesai.
+
+=== Melatih Model Final (Transfer Learning) untuk: PLTS ===
+Pelatihan Model Final untuk PLTS selesai.
+
+=== Melatih Model Final (Direct Training) untuk: PLTM ===
+Pelatihan Model Final untuk PLTM selesai.
+
+=== Melatih Model Final (Direct Training) untuk: PLTS Atap ===
+Pelatihan Model Final untuk PLTS Atap selesai.
+
+=== Melatih Model Final (Direct Training) untuk: PLT Hybrid ===
+Pelatihan Model Final untuk PLT Hybrid selesai.
+Model PLTA         disimpan ke: model_final\model_final_PLTA.keras
+Model PLTB         disimpan ke: model_final\model_final_PLTB.keras
+Model PLTMH        disimpan ke: model_final\model_final_PLTMH.keras
+Model PLTS         disimpan ke: model_final\model_final_PLTS.keras
+Model PLTM         disimpan ke: model_final\model_final_PLTM.keras
+Model PLTS Atap    disimpan ke: model_final\model_final_PLTS_Atap.keras
+Model PLT Hybrid   disimpan ke: model_final\model_final_PLT_Hybrid.keras
+Scaler PLTA         disimpan ke: model_final\scaler_fitur_PLTA.pkl & model_final\scaler_target_PLTA.pkl
+Scaler PLTB         disimpan ke: model_final\scaler_fitur_PLTB.pkl & model_final\scaler_target_PLTB.pkl
+Scaler PLTM         disimpan ke: model_final\scaler_fitur_PLTM.pkl & model_final\scaler_target_PLTM.pkl
+Scaler PLTMH        disimpan ke: model_final\scaler_fitur_PLTMH.pkl & model_final\scaler_target_PLTMH.pkl
+Scaler PLTS         disimpan ke: model_final\scaler_fitur_PLTS.pkl & model_final\scaler_target_PLTS.pkl
+Scaler PLTS Atap    disimpan ke: model_final\scaler_fitur_PLTS_Atap.pkl & model_final\scaler_target_PLTS_Atap.pkl
+Scaler PLT Hybrid   disimpan ke: model_final\scaler_fitur_PLT_Hybrid.pkl & model_final\scaler_target_PLT_Hybrid.pkl
+Metadata seluruh model disimpan ke: model_final\metadata_model.json
+Ringkasan Seluruh Model Final:
+    Jenis_PLT  ...                        Path_Scaler_Target
+0        PLTA  ...        model_final\scaler_target_PLTA.pkl
+1        PLTB  ...        model_final\scaler_target_PLTB.pkl
+2       PLTMH  ...       model_final\scaler_target_PLTMH.pkl
+3        PLTS  ...        model_final\scaler_target_PLTS.pkl
+4        PLTM  ...        model_final\scaler_target_PLTM.pkl
+5   PLTS Atap  ...   model_final\scaler_target_PLTS_Atap.pkl
+6  PLT Hybrid  ...  model_final\scaler_target_PLT_Hybrid.pkl
+
+[7 rows x 5 columns]
+
+Seluruh model, scaler, dan metadata telah disimpan pada folder: 'model_final/'
+Total model final yang berhasil dibuat: 7
+Periode forecasting: January 2026 - December 2028
+Total bulan yang diprediksi: 36 bulan
+Metadata model berhasil dimuat untuk jenis PLT:
+  - PLTA         | Metode: Transfer Learning  | Window: 6 bulan
+  - PLTB         | Metode: Transfer Learning  | Window: 6 bulan
+  - PLTMH        | Metode: Transfer Learning  | Window: 6 bulan
+  - PLTS         | Metode: Transfer Learning  | Window: 6 bulan
+  - PLTM         | Metode: Direct Training    | Window: 6 bulan
+  - PLTS Atap    | Metode: Direct Training    | Window: 6 bulan
+  - PLT Hybrid   | Metode: Direct Training    | Window: 6 bulan
+Model, scaler fitur, dan scaler target untuk PLTA berhasil dimuat.
+Model, scaler fitur, dan scaler target untuk PLTB berhasil dimuat.
+Model, scaler fitur, dan scaler target untuk PLTMH berhasil dimuat.
+Model, scaler fitur, dan scaler target untuk PLTS berhasil dimuat.
+Model, scaler fitur, dan scaler target untuk PLTM berhasil dimuat.
+Model, scaler fitur, dan scaler target untuk PLTS Atap berhasil dimuat.
+Model, scaler fitur, dan scaler target untuk PLT Hybrid berhasil dimuat.
+PLTA         -> Seed sequence disiapkan (window=6 bulan).
+PLTB         -> Seed sequence disiapkan (window=6 bulan).
+PLTMH        -> Seed sequence disiapkan (window=6 bulan).
+PLTS         -> Seed sequence disiapkan (window=6 bulan).
+PLTM         -> Seed sequence disiapkan (window=6 bulan).
+PLTS Atap    -> Seed sequence disiapkan (window=6 bulan).
+PLT Hybrid   -> Seed sequence disiapkan (window=6 bulan).
+Fungsi forecast_autoregressive() berhasil dibuat.
+Menjalankan forecasting untuk: PLTA ...
+Menjalankan forecasting untuk: PLTB ...
+Menjalankan forecasting untuk: PLTMH ...
+Menjalankan forecasting untuk: PLTS ...
+Menjalankan forecasting untuk: PLTM ...
+Menjalankan forecasting untuk: PLTS Atap ...
+Menjalankan forecasting untuk: PLT Hybrid ...
+
+Forecasting untuk seluruh jenis PLT selesai dijalankan.
+PLTA         -> Inverse transform selesai. Contoh 3 bulan pertama: [41.72 42.25 38.78]
+PLTB         -> Inverse transform selesai. Contoh 3 bulan pertama: [55.6  54.91 53.29]
+PLTMH        -> Inverse transform selesai. Contoh 3 bulan pertama: [21.34 21.81 20.31]
+PLTS         -> Inverse transform selesai. Contoh 3 bulan pertama: [1.08 1.08 1.08]
+PLTM         -> Inverse transform selesai. Contoh 3 bulan pertama: [28.09 28.3  28.62]
+PLTS Atap    -> Inverse transform selesai. Contoh 3 bulan pertama: [1.16 1.18 1.17]
+PLT Hybrid   -> Inverse transform selesai. Contoh 3 bulan pertama: [0.22 0.22 0.22]
+DataFrame forecasting per jenis PLT berhasil dibentuk untuk seluruh PLT.
+DataFrame forecast_ebt (seluruh jenis PLT, 2026-2028):
+DataFrame forecast_total (total seluruh jenis PLT per bulan, 2026-2028):
+Hasil forecasting berhasil disimpan:
+  - forecast\forecast_per_PLT.csv
+  - forecast\forecast_total.csv
+  - forecast\forecast_per_PLT.xlsx
+Ringkasan Total Produksi EBT per Tahun (Hasil Forecasting):
+   Tahun  Total_Produksi_EBT_Tahunan
+0   2026                 1627.358521
+1   2027                 1606.493408
+2   2028                 1605.274170
+
+Ringkasan Rata-Rata Produksi Bulanan per Jenis PLT (2026-2028):
+    Jenis_PLT  Rata2_Produksi_Bulanan
+0        PLTB               53.736084
+1        PLTA               32.335495
+2        PLTM               28.662977
+3       PLTMH               17.290041
+4        PLTS                1.094736
+5   PLTS Atap                1.089899
+6  PLT Hybrid                0.210933
+Struktur folder 'EBT_LSTM_Streamlit/' berhasil dibuat dengan sub-folder: ['models', 'scalers', 'config', 'evaluation', 'forecast']
+Model PLTA         (Transfer Learning ) disalin ke: EBT_LSTM_Streamlit\models\model_final_PLTA.keras
+Model PLTB         (Transfer Learning ) disalin ke: EBT_LSTM_Streamlit\models\model_final_PLTB.keras
+Model PLTMH        (Transfer Learning ) disalin ke: EBT_LSTM_Streamlit\models\model_final_PLTMH.keras
+Model PLTS         (Transfer Learning ) disalin ke: EBT_LSTM_Streamlit\models\model_final_PLTS.keras
+Model PLTM         (Direct Training   ) disalin ke: EBT_LSTM_Streamlit\models\model_final_PLTM.keras
+Model PLTS Atap    (Direct Training   ) disalin ke: EBT_LSTM_Streamlit\models\model_final_PLTS_Atap.keras
+Model PLT Hybrid   (Direct Training   ) disalin ke: EBT_LSTM_Streamlit\models\model_final_PLT_Hybrid.keras
+Model PLTA         (Transfer Learning ) disalin ke: EBT_LSTM_Streamlit\models\model_final_PLTA.keras
+Model PLTB         (Transfer Learning ) disalin ke: EBT_LSTM_Streamlit\models\model_final_PLTB.keras
+Model PLTMH        (Transfer Learning ) disalin ke: EBT_LSTM_Streamlit\models\model_final_PLTMH.keras
+Model PLTS         (Transfer Learning ) disalin ke: EBT_LSTM_Streamlit\models\model_final_PLTS.keras
+Model PLTM         (Direct Training   ) disalin ke: EBT_LSTM_Streamlit\models\model_final_PLTM.keras
+Model PLTS Atap    (Direct Training   ) disalin ke: EBT_LSTM_Streamlit\models\model_final_PLTS_Atap.keras
+Model PLT Hybrid   (Direct Training   ) disalin ke: EBT_LSTM_Streamlit\models\model_final_PLT_Hybrid.keras
+Scaler fitur & target untuk PLTA disalin ke folder scalers/
+Scaler fitur & target untuk PLTB disalin ke folder scalers/
+Scaler fitur & target untuk PLTMH disalin ke folder scalers/
+Scaler fitur & target untuk PLTS disalin ke folder scalers/
+Scaler fitur & target untuk PLTM disalin ke folder scalers/
+Scaler fitur & target untuk PLTS Atap disalin ke folder scalers/
+Scaler fitur & target untuk PLT Hybrid disalin ke folder scalers/
+Konfigurasi model seluruh PLT disimpan ke: EBT_LSTM_Streamlit\config\konfigurasi_model.json
+Disimpan: EBT_LSTM_Streamlit\evaluation\evaluasi_baseline.csv
+Disimpan: EBT_LSTM_Streamlit\evaluation\evaluasi_finetuning.csv
+Disimpan: EBT_LSTM_Streamlit\evaluation\evaluasi_iterasi1.csv
+Disimpan: EBT_LSTM_Streamlit\evaluation\evaluasi_iterasi2.csv
+Disimpan: EBT_LSTM_Streamlit\evaluation\evaluasi_iterasi3.csv
+Disimpan: EBT_LSTM_Streamlit\evaluation\perbandingan_lengkap_seluruh_model.csv
+Disimpan: EBT_LSTM_Streamlit\evaluation\ringkasan_rata2_seluruh_model.csv
+Disimpan: EBT_LSTM_Streamlit\evaluation\model_terbaik_per_plt.csv
+Disimpan: EBT_LSTM_Streamlit\forecast\forecast_per_PLT_2026_2028.csv
+Disimpan: EBT_LSTM_Streamlit\forecast\forecast_total_2026_2028.csv
+Metadata penelitian disimpan ke: EBT_LSTM_Streamlit\metadata_penelitian.json
+Struktur folder 'EBT_LSTM_Streamlit/':
+
+EBT_LSTM_Streamlit/
+  - metadata_penelitian.json
+  config/
+    - konfigurasi_model.json
+  evaluation/
+    - evaluasi_baseline.csv
+    - evaluasi_finetuning.csv
+    - evaluasi_iterasi1.csv
+    - evaluasi_iterasi2.csv
+    - evaluasi_iterasi3.csv
+    - model_terbaik_per_plt.csv
+    - perbandingan_lengkap_seluruh_model.csv
+    - ringkasan_rata2_seluruh_model.csv
+  forecast/
+    - forecast_per_PLT_2026_2028.csv
+    - forecast_total_2026_2028.csv
+  models/
+    - model_final_PLTA.keras
+    - model_final_PLTB.keras
+    - model_final_PLTM.keras
+    - model_final_PLTMH.keras
+    - model_final_PLTS.keras
+    - model_final_PLTS_Atap.keras
+    - model_final_PLT_Hybrid.keras
+  scalers/
+    - scaler_fitur_PLTA.pkl
+    - scaler_fitur_PLTB.pkl
+    - scaler_fitur_PLTM.pkl
+    - scaler_fitur_PLTMH.pkl
+    - scaler_fitur_PLTS.pkl
+    - scaler_fitur_PLTS_Atap.pkl
+    - scaler_fitur_PLT_Hybrid.pkl
+    - scaler_target_PLTA.pkl
+    - scaler_target_PLTB.pkl
+    - scaler_target_PLTM.pkl
+    - scaler_target_PLTMH.pkl
+    - scaler_target_PLTS.pkl
+    - scaler_target_PLTS_Atap.pkl
+    - scaler_target_PLT_Hybrid.pkl
+File ZIP berhasil dibuat: C:\prediksi-lstm-ebt-react-app\audit\results\pipeline_run_baseline_timesplit\EBT_LSTM_Streamlit.zip
+Ukuran file: 2.30 MB
+Memulai proses download file ZIP...
+[shim] files.download('C:\prediksi-lstm-ebt-react-app\audit\results\pipeline_run_baseline_timesplit\EBT_LSTM_Streamlit.zip') dilewati (bukan lingkungan Colab)
+Jika unduhan tidak dimulai otomatis, periksa pop-up blocker pada browser Anda.
+
+=== SELESAI: pipeline berjalan sampai akhir tanpa exception ===

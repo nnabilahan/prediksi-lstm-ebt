@@ -2,36 +2,160 @@
     "judul_penelitian": "Prediksi Produksi Energi Baru Terbarukan (EBT) Sektor Kelistrikan Provinsi Sulawesi Selatan Menggunakan LSTM dengan Transfer Learning",
     "metodologi": "CRISP-DM",
     "jenis_plt": [
-        "PLTA",
-        "PLTB",
-        "PLTMH",
         "PLTS",
         "PLTM",
+        "PLTA",
+        "PLT Hybrid",
         "PLTS Atap",
-        "PLT Hybrid"
+        "PLTMH",
+        "PLTB"
     ],
     "periode_data_historis": "2023-2025 (Regional), 2020-2024 (Nasional untuk Pre-Training)",
     "periode_forecasting": "Januari 2026 - Desember 2028",
-    "model_terbaik_keseluruhan": "FineTuning",
-    "konfigurasi_model_terbaik_keseluruhan": {
-        "Metode": "Transfer Learning (PLTA,PLTB,PLTM,PLTMH,PLTS) / Direct Training (PLTS Atap, PLT Hybrid)",
-        "Window_Size": 6,
-        "Learning_Rate": 0.0001,
-        "Dropout": 0.2,
-        "Batch_Size": 8,
-        "Epochs": 100,
-        "Optimizer": "Adam",
-        "Callback": "EarlyStopping, ReduceLROnPlateau"
+    "konfigurasi_final_per_plt": {
+        "PLTS": {
+            "jenis_plt": "PLTS",
+            "metode": "Transfer Learning",
+            "window_size": 12,
+            "learning_rate": 5e-05,
+            "dropout": 0.2,
+            "batch_size": 8,
+            "epochs": 100,
+            "optimizer": "Adam",
+            "fitur_input": [
+                "Cuaca",
+                "Kapasitas",
+                "Produksi"
+            ],
+            "target_prediksi": "Produksi",
+            "nama_file_model": "model_final_PLTS.keras",
+            "nama_file_scaler_fitur": "scaler_fitur_PLTS.pkl",
+            "nama_file_scaler_target": "scaler_target_PLTS.pkl"
+        },
+        "PLTM": {
+            "jenis_plt": "PLTM",
+            "metode": "Transfer Learning",
+            "window_size": 6,
+            "learning_rate": 5e-05,
+            "dropout": 0.2,
+            "batch_size": 8,
+            "epochs": 100,
+            "optimizer": "Adam",
+            "fitur_input": [
+                "Cuaca",
+                "Kapasitas",
+                "Produksi"
+            ],
+            "target_prediksi": "Produksi",
+            "nama_file_model": "model_final_PLTM.keras",
+            "nama_file_scaler_fitur": "scaler_fitur_PLTM.pkl",
+            "nama_file_scaler_target": "scaler_target_PLTM.pkl"
+        },
+        "PLTA": {
+            "jenis_plt": "PLTA",
+            "metode": "Transfer Learning",
+            "window_size": 6,
+            "learning_rate": 0.0001,
+            "dropout": 0.2,
+            "batch_size": 8,
+            "epochs": 100,
+            "optimizer": "Adam",
+            "fitur_input": [
+                "Cuaca",
+                "Kapasitas",
+                "Produksi"
+            ],
+            "target_prediksi": "Produksi",
+            "nama_file_model": "model_final_PLTA.keras",
+            "nama_file_scaler_fitur": "scaler_fitur_PLTA.pkl",
+            "nama_file_scaler_target": "scaler_target_PLTA.pkl"
+        },
+        "PLT Hybrid": {
+            "jenis_plt": "PLT Hybrid",
+            "metode": "Direct Training",
+            "window_size": 12,
+            "learning_rate": 5e-05,
+            "dropout": 0.2,
+            "batch_size": 8,
+            "epochs": 100,
+            "optimizer": "Adam",
+            "fitur_input": [
+                "Cuaca",
+                "Kapasitas",
+                "Produksi"
+            ],
+            "target_prediksi": "Produksi",
+            "nama_file_model": "model_final_PLT_Hybrid.keras",
+            "nama_file_scaler_fitur": "scaler_fitur_PLT_Hybrid.pkl",
+            "nama_file_scaler_target": "scaler_target_PLT_Hybrid.pkl"
+        },
+        "PLTS Atap": {
+            "jenis_plt": "PLTS Atap",
+            "metode": "Direct Training",
+            "window_size": 12,
+            "learning_rate": 5e-05,
+            "dropout": 0.2,
+            "batch_size": 8,
+            "epochs": 100,
+            "optimizer": "Adam",
+            "fitur_input": [
+                "Cuaca",
+                "Kapasitas",
+                "Produksi"
+            ],
+            "target_prediksi": "Produksi",
+            "nama_file_model": "model_final_PLTS_Atap.keras",
+            "nama_file_scaler_fitur": "scaler_fitur_PLTS_Atap.pkl",
+            "nama_file_scaler_target": "scaler_target_PLTS_Atap.pkl"
+        },
+        "PLTMH": {
+            "jenis_plt": "PLTMH",
+            "metode": "Direct Training",
+            "window_size": 6,
+            "learning_rate": "default (Adam)",
+            "dropout": 0.2,
+            "batch_size": 8,
+            "epochs": 100,
+            "optimizer": "Adam",
+            "fitur_input": [
+                "Cuaca",
+                "Kapasitas",
+                "Produksi"
+            ],
+            "target_prediksi": "Produksi",
+            "nama_file_model": "model_final_PLTMH.keras",
+            "nama_file_scaler_fitur": "scaler_fitur_PLTMH.pkl",
+            "nama_file_scaler_target": "scaler_target_PLTMH.pkl"
+        },
+        "PLTB": {
+            "jenis_plt": "PLTB",
+            "metode": "Direct Training",
+            "window_size": 6,
+            "learning_rate": "default (Adam)",
+            "dropout": 0.2,
+            "batch_size": 8,
+            "epochs": 100,
+            "optimizer": "Adam",
+            "fitur_input": [
+                "Cuaca",
+                "Kapasitas",
+                "Produksi"
+            ],
+            "target_prediksi": "Produksi",
+            "nama_file_model": "model_final_PLTB.keras",
+            "nama_file_scaler_fitur": "scaler_fitur_PLTB.pkl",
+            "nama_file_scaler_target": "scaler_target_PLTB.pkl"
+        }
     },
     "metode_per_plt": {
-        "PLTA": "Transfer Learning",
-        "PLTB": "Transfer Learning",
-        "PLTMH": "Transfer Learning",
         "PLTS": "Transfer Learning",
-        "PLTM": "Direct Training",
+        "PLTM": "Transfer Learning",
+        "PLTA": "Transfer Learning",
+        "PLT Hybrid": "Direct Training",
         "PLTS Atap": "Direct Training",
-        "PLT Hybrid": "Direct Training"
+        "PLTMH": "Direct Training",
+        "PLTB": "Direct Training"
     },
-    "tanggal_dibuat": "2026-07-23 22:23:41",
-    "catatan": "Forecasting menggunakan pendekatan autoregressive dengan asumsi fitur Cuaca dan Kapasitas mengikuti Last Observation Carried Forward (LOCF)."
+    "tanggal_dibuat": "2026-07-26 13:57:16",
+    "catatan": "Forecasting menggunakan pendekatan autoregressive dengan asumsi fitur Cuaca dan Kapasitas mengikuti Last Observation Carried Forward (LOCF). Konfigurasi model final (window size, learning rate, dropout, batch size, epochs, metode) ditentukan PER JENIS PLT berdasarkan RMSE validasi masing-masing (lihat konfigurasi_final_per_plt), bukan satu konfigurasi tunggal untuk seluruh PLT."
 }

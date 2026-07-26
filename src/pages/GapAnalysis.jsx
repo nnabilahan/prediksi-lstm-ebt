@@ -7,6 +7,7 @@ import Note from '../components/ui/Note';
 import Footer from '../components/layout/Footer';
 import Field, { inputStyle } from '../components/ui/Field';
 import ForecastLineChart from '../components/charts/ForecastLineChart';
+import GrowthRateChart from '../components/charts/GrowthRateChart';
 import DataTable, { Td } from '../components/ui/DataTable';
 import { C } from '../lib/tokens';
 import { fmt } from '../lib/utils';
@@ -28,6 +29,25 @@ function perPltAnnual(plant, year) {
   if (!data) return null;
   const startIdx = (year - 2026) * 12;
   return data.slice(startIdx, startIdx + 12).reduce((s, v) => s + v, 0);
+}
+
+// Tren pertumbuhan (growth rate) forecast 2026-2028 untuk konteks terpilih
+// (total atau per jenis PLT) -- 2026 tidak punya YoY karena tidak ada
+// tahun forecast sebelumnya untuk dibandingkan (konsisten dengan field
+// `yoy` di ANNUAL_FORECAST, yang juga null untuk 2026).
+function buildGrowthSeries(jenis, plt) {
+  const years = [2026, 2027, 2028];
+  const totals = years.map((year) => (
+    jenis === 'total'
+      ? ANNUAL_FORECAST.find(r => r.year === year)?.total ?? null
+      : (year === 2026 ? PER_JENIS_2026.find(r => r.jenis === plt)?.produksi ?? null : perPltAnnual(plt, year))
+  ));
+  return years.map((year, i) => {
+    const total = totals[i];
+    const prev = i > 0 ? totals[i - 1] : null;
+    const yoy = (total != null && prev != null && prev !== 0) ? ((total - prev) / prev) * 100 : null;
+    return { year, total, yoy };
+  });
 }
 
 export default function GapAnalysis() {
@@ -57,6 +77,9 @@ export default function GapAnalysis() {
 
   const rowLabel = jenis === 'total' ? 'Seluruh Jenis PLT (Total EBT)' : plt;
   const konteks = jenis === 'total' ? 'seluruh jenis PLT' : plt;
+
+  const growthSeries = buildGrowthSeries(jenis, plt);
+  const growthChartData = growthSeries.filter(r => r.yoy != null).map(r => ({ year: r.year, yoy: r.yoy }));
 
   return (
     <>
@@ -169,6 +192,40 @@ export default function GapAnalysis() {
             </div>
           </Panel>
         </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+        <Panel
+          className="lg:col-span-7"
+          title={`Tren pertumbuhan (growth rate) forecast 2026–2028 — ${rowLabel}`}
+          note="Persentase perubahan forecast tahun berjalan terhadap tahun sebelumnya. 2026 tidak punya nilai growth karena tidak ada tahun forecast sebelumnya untuk dibandingkan."
+        >
+          {growthChartData.length > 0 ? (
+            <GrowthRateChart data={growthChartData} height={180} />
+          ) : (
+            <p className="text-xs" style={{ color: '#8E9C91' }}>Data growth rate tidak tersedia untuk konteks ini.</p>
+          )}
+        </Panel>
+
+        <Panel className="lg:col-span-5" title="Tabel growth rate per tahun" noPad>
+          <DataTable
+            minWidth={320}
+            cols={[
+              { label: 'Tahun', width: '25%' },
+              { label: 'Forecast (GWh)', width: '40%', align: 'right' },
+              { label: 'Growth YoY', width: '35%', align: 'right' },
+            ]}
+            rows={growthSeries.map((r) => (
+              <tr key={r.year} style={{ borderBottom: `1px solid ${C.line}` }}>
+                <Td mono>{r.year}</Td>
+                <Td align="right" mono color={C.blue}>{fmt(r.total, 2)}</Td>
+                <Td align="right" mono color={r.yoy == null ? undefined : (r.yoy >= 0 ? C.ok : C.red)}>
+                  {r.yoy == null ? '—' : `${r.yoy >= 0 ? '+' : ''}${fmt(r.yoy, 1)}%`}
+                </Td>
+              </tr>
+            ))}
+          />
+        </Panel>
       </div>
 
       <Panel

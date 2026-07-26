@@ -15,8 +15,9 @@ lihat audit/results/audit_findings.md di repo untuk detail lengkap.
 Ada 3 lokasi yang diperbaiki (ditandai komentar "[FIX LEAKAGE #N]" di
 kodenya), semuanya mengubah urutan `scaler.fit_transform(seluruh_data)`
 menjadi `scaler.fit(hanya_data_train)` lalu `scaler.transform(seluruh_data)`:
-1. Baseline (univariate regional) -- scaler kini hanya fit dari porsi 80%
-   pertama (sesuai TRAIN_RATIO), bukan seluruh seri.
+1. Baseline (univariate regional) -- scaler kini hanya fit dari baris tahun
+   <=2024 (periode train+val), bukan seluruh seri termasuk 2025 (lihat juga
+   "[FIX SPLIT #1]" di bawah).
 2. Pre-Training nasional -- scaler kini hanya fit dari baris tahun <=2023
    (periode train), bukan ikut 2024 (periode validasi).
 3. Regional (dipakai bersama tahap Fine-Tuning + Iterasi 1/2/3) -- scaler
@@ -32,6 +33,17 @@ Akibat perbaikan ini, angka RMSE/MAE/MAPE pada Baseline/Pre-Training/
 Fine-Tuning/Iterasi 1-3 akan SEDIKIT BERBEDA dari hasil run sebelumnya
 (lihat audit/results/eval_summary_before_leakage_fix.csv untuk angka
 versi lama sebagai pembanding).
+
+## CATATAN TASK GROUP 1 (perbaikan split Baseline)
+
+Selain FIX LEAKAGE di atas, split Baseline (ditandai komentar
+"[FIX SPLIT #N]") diubah dari rasio index 80/20 (`TRAIN_RATIO`) menjadi
+time-based per tahun kalender, identik polanya dengan Fine-Tuning: train+val
+= 2023-2024 (dipecah lagi 85/15 pakai `VAL_INTERNAL_RATIO` untuk validasi
+internal), test = 2025. Ini menyamakan periode data uji Baseline dengan
+periode data uji varian lain, dan membuat Baseline sekarang divalidasi
+memakai `X_val`/`y_val` saat training (sebelumnya divalidasi memakai
+`X_test`/`y_test`, yang juga merupakan jalur leakage tersendiri).
 
 LIBRARAY
 """
@@ -130,12 +142,19 @@ TARGET_COL = "Produksi"
 # Mengambil daftar unik jenis PLT yang akan diproses satu per satu
 daftar_plt = df["Jenis"].unique()
 print("Jenis PLT yang akan diproses:", daftar_plt)
-# [FIX LEAKAGE #1] WINDOW_SIZE dan TRAIN_RATIO dipindah ke sini (sebelumnya
-# didefinisikan lebih bawah) supaya bisa dipakai untuk menghitung batas
-# train/test SEBELUM scaler di-fit -- lihat audit/results/audit_findings.md
-# bagian "Data Leakage (Scaler Fit-Before-Split)".
+# [FIX LEAKAGE #1] WINDOW_SIZE dipindah ke sini (sebelumnya didefinisikan
+# lebih bawah) supaya bisa dipakai untuk menghitung batas train/test SEBELUM
+# scaler di-fit -- lihat audit/results/audit_findings.md bagian "Data
+# Leakage (Scaler Fit-Before-Split)".
 WINDOW_SIZE = 6
-TRAIN_RATIO = 0.8
+
+# [FIX SPLIT #1] VAL_INTERNAL_RATIO dipindah ke sini (sebelumnya hanya
+# didefinisikan di tahap Fine-Tuning) supaya Baseline bisa memakai rasio
+# validasi internal yang sama persis -- lihat Task Group 1 (perbaikan split
+# Baseline jadi time-based) di catatan docstring atas file ini.
+# TRAIN_RATIO (rasio index 80/20) DIHAPUS -- split Baseline sekarang
+# time-based per tahun kalender, sama seperti Fine-Tuning/Iterasi 1-3.
+VAL_INTERNAL_RATIO = 0.85
 
 # 4. Normalisasi data menggunakan MinMaxScaler (dilakukan per jenis PLT)
 # Dictionary untuk menyimpan data yang telah dinormalisasi per jenis PLT
@@ -145,24 +164,26 @@ scaler_per_plt = {}        # menyimpan objek scaler tiap PLT (dipakai untuk inve
 for plt_name in daftar_plt:
     # Mengambil data untuk 1 jenis PLT saja, urut berdasarkan waktu
     data_plt = df[df["Jenis"] == plt_name][[FEATURE_COL]].values
+    tanggal_plt = df[df["Jenis"] == plt_name]["Tanggal"].values
 
     # [FIX LEAKAGE #1] Sebelumnya: scaler.fit_transform(data_plt) -- di-fit
     # pada SELURUH seri (termasuk porsi yang nanti jadi data uji/test).
-    # Sekarang: scaler HANYA di-fit pada porsi yang akan jadi data train
-    # (raw_train_boundary), lalu dipakai untuk transform seluruh seri.
-    n_seq_total = len(data_plt) - WINDOW_SIZE
-    split_index_plt = int(n_seq_total * TRAIN_RATIO)
-    raw_train_boundary = WINDOW_SIZE + split_index_plt  # raw rows yang hanya dipakai sequence train
+    # [FIX SPLIT #1] Batas fit scaler sekarang time-based (tahun <=2024 =
+    # periode train+val), bukan lagi rasio index (TRAIN_RATIO) -- sejajar
+    # dengan periode train/test yang dipakai dataset_per_plt di bawah dan
+    # dengan pola scaler regional di "[FIX LEAKAGE #3]".
+    train_val_mask_plt = pd.DatetimeIndex(tanggal_plt).year <= 2024
 
     scaler = MinMaxScaler(feature_range=(0, 1))
-    scaler.fit(data_plt[:raw_train_boundary])
+    scaler.fit(data_plt[train_val_mask_plt])
     data_plt_scaled = scaler.transform(data_plt)
 
-    # Menyimpan hasil normalisasi dan scaler ke dictionary
+    # Menyimpan hasil normalisasi, scaler, dan tanggal ke dictionary
     data_scaled_per_plt[plt_name] = data_plt_scaled
     scaler_per_plt[plt_name] = scaler
+    data_scaled_per_plt[plt_name + "_tanggal"] = tanggal_plt
 
-print("Normalisasi data selesai dilakukan untuk seluruh jenis PLT (scaler di-fit hanya pada porsi train, lihat FIX LEAKAGE #1).")
+print("Normalisasi data selesai dilakukan untuk seluruh jenis PLT (scaler di-fit hanya pada porsi train+val 2023-2024, lihat FIX LEAKAGE #1 dan FIX SPLIT #1).")
 
 def create_sequences(data, window_size=6):
     """
@@ -190,7 +211,7 @@ def create_sequences(data, window_size=6):
 
     return np.array(X), np.array(y)
 
-# WINDOW_SIZE dan TRAIN_RATIO sudah didefinisikan lebih awal (lihat FIX LEAKAGE #1 di atas).
+# WINDOW_SIZE sudah didefinisikan lebih awal (lihat FIX LEAKAGE #1 di atas).
 print(f"Fungsi create_sequences() berhasil dibuat dengan window_size = {WINDOW_SIZE} bulan.")
 
 # Dictionary untuk menyimpan hasil split data per jenis PLT
@@ -199,25 +220,41 @@ dataset_per_plt = {}
 for plt_name in daftar_plt:
     # Membuat sequence (X, y) dari data yang sudah dinormalisasi
     data_plt_scaled = data_scaled_per_plt[plt_name]
+    tanggal_plt = data_scaled_per_plt[plt_name + "_tanggal"]
     X_plt, y_plt = create_sequences(data_plt_scaled, window_size=WINDOW_SIZE)
 
-    # Menentukan titik pemisah data train dan test berdasarkan urutan waktu
-    split_index = int(len(X_plt) * TRAIN_RATIO)
+    # [FIX SPLIT #1] Split train/val/test sekarang time-based per tahun
+    # kalender (sama polanya dengan KEGIATAN 4 di tahap Fine-Tuning),
+    # bukan lagi titik pemisah berbasis rasio index (TRAIN_RATIO).
+    # Tanggal disesuaikan agar sejajar dengan titik target (bukan titik awal window).
+    tanggal_target = pd.to_datetime(tanggal_plt[WINDOW_SIZE:])
 
-    X_train = X_plt[:split_index]
-    y_train = y_plt[:split_index]
-    X_test = X_plt[split_index:]
-    y_test = y_plt[split_index:]
+    mask_train_val = (tanggal_target.year >= 2023) & (tanggal_target.year <= 2024)
+    mask_test = tanggal_target.year == 2025
+
+    X_train_val = X_plt[mask_train_val]
+    y_train_val = y_plt[mask_train_val]
+    X_test = X_plt[mask_test]
+    y_test = y_plt[mask_test]
+
+    # Split internal (time-based, tanpa acak) khusus untuk validasi selama training
+    split_idx = int(len(X_train_val) * VAL_INTERNAL_RATIO)
+    X_train = X_train_val[:split_idx]
+    y_train = y_train_val[:split_idx]
+    X_val = X_train_val[split_idx:]
+    y_val = y_train_val[split_idx:]
 
     # Menyimpan hasil split ke dictionary agar mudah dipanggil kembali saat training
     dataset_per_plt[plt_name] = {
         "X_train": X_train,
         "y_train": y_train,
+        "X_val": X_val,
+        "y_val": y_val,
         "X_test": X_test,
         "y_test": y_test,
     }
 
-    print(f"{plt_name:15s} -> Total sample: {len(X_plt):3d} | Train: {len(X_train):3d} | Test: {len(X_test):3d}")
+    print(f"{plt_name:15s} -> Total sample: {len(X_plt):3d} | Train: {len(X_train):3d} | Val: {len(X_val):3d} | Test: {len(X_test):3d}")
 
 def build_baseline_lstm(window_size, n_features=1, l2_rate=0.001, dropout_rate=0.2):
     """
@@ -297,19 +334,23 @@ BATCH_SIZE = 8
 for plt_name in daftar_plt:
     print(f"\n=== Melatih Model Baseline LSTM untuk: {plt_name} ===")
 
-    # Mengambil data train dan test untuk jenis PLT saat ini
+    # Mengambil data train dan validasi internal untuk jenis PLT saat ini
+    # [FIX SPLIT #1] Sebelumnya divalidasi dengan X_test/y_test (data uji
+    # 2025) -- sekarang divalidasi dengan X_val/y_val (bagian akhir periode
+    # train+val 2023-2024), supaya EarlyStopping/ReduceLROnPlateau tidak
+    # pernah melihat data uji akhir sama sekali.
     X_train = dataset_per_plt[plt_name]["X_train"]
     y_train = dataset_per_plt[plt_name]["y_train"]
-    X_test = dataset_per_plt[plt_name]["X_test"]
-    y_test = dataset_per_plt[plt_name]["y_test"]
+    X_val = dataset_per_plt[plt_name]["X_val"]
+    y_val = dataset_per_plt[plt_name]["y_val"]
 
     # Membangun model baru (arsitektur sama untuk semua PLT)
     model = build_baseline_lstm(window_size=WINDOW_SIZE)
 
-    # Melatih model menggunakan data train, divalidasi dengan data test
+    # Melatih model menggunakan data train, divalidasi dengan data validasi internal
     history = model.fit(
         X_train, y_train,
-        validation_data=(X_test, y_test),
+        validation_data=(X_val, y_val),
         epochs=EPOCHS,
         batch_size=BATCH_SIZE,
         callbacks=get_callbacks(),
@@ -426,6 +467,40 @@ df_evaluasi = df_evaluasi.reset_index()
 
 # Mengurutkan berdasarkan nilai RMSE terkecil (model terbaik) ke terbesar
 df_evaluasi = df_evaluasi.sort_values(by="RMSE", ascending=True).reset_index(drop=True)
+
+# ============================================================
+# [TASK GROUP 2] Evaluasi Baseline pada DATA VALIDASI (X_val/y_val)
+# Dipakai untuk PEMILIHAN model terbaik (lihat KEGIATAN 10 di bagian
+# perbandingan seluruh model) -- RMSE test 2025 di atas TETAP dihitung
+# dan dilaporkan, tapi bukan lagi dasar pemilihan (lihat audit/results
+# untuk detail temuan test-set leakage pada pemilihan model).
+# ============================================================
+
+evaluasi_val_per_plt = {}
+
+for plt_name in daftar_plt:
+    model = hasil_training_per_plt[plt_name]["model"]
+    scaler = scaler_per_plt[plt_name]
+
+    X_val = dataset_per_plt[plt_name]["X_val"]
+    y_val = dataset_per_plt[plt_name]["y_val"]
+
+    y_pred_scaled_val = model.predict(X_val, verbose=0)
+    y_pred_asli_val = scaler.inverse_transform(y_pred_scaled_val)
+    y_val_asli = scaler.inverse_transform(y_val.reshape(-1, 1))
+
+    rmse_val = np.sqrt(mean_squared_error(y_val_asli, y_pred_asli_val))
+    mae_val = mean_absolute_error(y_val_asli, y_pred_asli_val)
+    mape_val = hitung_mape(y_val_asli, y_pred_asli_val)
+
+    evaluasi_val_per_plt[plt_name] = {"RMSE": rmse_val, "MAE": mae_val, "MAPE": mape_val}
+
+    print(f"{plt_name:15s} -> [VALIDASI] RMSE: {rmse_val:8.3f} | MAE: {mae_val:8.3f} | MAPE: {mape_val:6.2f}%")
+
+df_evaluasi_val = pd.DataFrame(evaluasi_val_per_plt).T
+df_evaluasi_val.index.name = "Jenis_PLT"
+df_evaluasi_val = df_evaluasi_val.reset_index()
+df_evaluasi_val = df_evaluasi_val.sort_values(by="RMSE", ascending=True).reset_index(drop=True)
 
 print("Ringkasan Hasil Evaluasi Model Baseline LSTM per Jenis PLT:")
 df_evaluasi
@@ -906,7 +981,8 @@ dataset_finetune_per_plt = {}
 
 # Rasio kecil dari periode Fine-Tuning (2023-2024) disisihkan sebagai VALIDASI INTERNAL
 # untuk keperluan EarlyStopping/ReduceLROnPlateau, TANPA menyentuh data test 2025 sama sekali.
-VAL_INTERNAL_RATIO = 0.85  # 85% awal periode FT untuk latih, 15% akhir untuk validasi internal
+# VAL_INTERNAL_RATIO sudah didefinisikan di awal file (dekat WINDOW_SIZE, lihat
+# "[FIX SPLIT #1]") supaya Baseline bisa memakai rasio yang sama persis.
 
 for plt_name in daftar_plt_regional:
     X_seq = sequence_regional_per_plt[plt_name]["X"]
@@ -1155,6 +1231,38 @@ df_evaluasi_finetune = df_evaluasi_finetune.sort_values(by="RMSE", ascending=Tru
 
 print("Ringkasan Hasil Evaluasi Fine-Tuning (Data Regional 2025) per Jenis PLT:")
 df_evaluasi_finetune
+
+# ============================================================
+# [TASK GROUP 2] Evaluasi Fine-Tuning pada DATA VALIDASI (X_val_ft/y_val_ft)
+# Dipakai untuk PEMILIHAN model terbaik -- lihat catatan yang sama di
+# tahap Baseline di atas.
+# ============================================================
+
+evaluasi_finetune_val_per_plt = {}
+
+for plt_name in daftar_plt_final:
+    model = hasil_finetune_per_plt[plt_name]["model"]
+    scaler_target = scaler_target_regional_per_plt[plt_name]
+
+    X_val_ft = dataset_finetune_per_plt[plt_name]["X_val_ft"]
+    y_val_ft = dataset_finetune_per_plt[plt_name]["y_val_ft"]
+
+    y_pred_scaled_val = model.predict(X_val_ft, verbose=0)
+    y_pred_asli_val = scaler_target.inverse_transform(y_pred_scaled_val)
+    y_val_asli = scaler_target.inverse_transform(y_val_ft.reshape(-1, 1))
+
+    rmse_val = np.sqrt(mean_squared_error(y_val_asli, y_pred_asli_val))
+    mae_val = mean_absolute_error(y_val_asli, y_pred_asli_val)
+    mape_val = hitung_mape(y_val_asli, y_pred_asli_val)
+
+    evaluasi_finetune_val_per_plt[plt_name] = {"RMSE": rmse_val, "MAE": mae_val, "MAPE": mape_val}
+
+    print(f"{plt_name:12s} -> [VALIDASI] RMSE: {rmse_val:8.3f} | MAE: {mae_val:8.3f} | MAPE: {mape_val:6.2f}%")
+
+df_evaluasi_finetune_val = pd.DataFrame(evaluasi_finetune_val_per_plt).T
+df_evaluasi_finetune_val.index.name = "Jenis_PLT"
+df_evaluasi_finetune_val = df_evaluasi_finetune_val.reset_index()
+df_evaluasi_finetune_val = df_evaluasi_finetune_val.sort_values(by="RMSE", ascending=True).reset_index(drop=True)
 
 # ============================================================
 # KEGIATAN 13: Tabel Perbandingan Baseline LSTM vs Fine-Tuning Transfer Learning
@@ -1421,6 +1529,38 @@ hasil_iterasi1 = hasil_iterasi1.sort_values(by="RMSE", ascending=True).reset_ind
 
 print("Ringkasan Hasil Evaluasi Iterasi 1 (Learning Rate = 0.00005) per Jenis PLT:")
 hasil_iterasi1
+
+# ============================================================
+# [TASK GROUP 2] Evaluasi Iterasi 1 pada DATA VALIDASI (X_val_ft/y_val_ft,
+# window sama dengan Fine-Tuning). Dipakai untuk PEMILIHAN model terbaik --
+# lihat catatan yang sama di tahap Baseline di atas.
+# ============================================================
+
+evaluasi_iter1_val_per_plt = {}
+
+for plt_name in daftar_plt_final:
+    model_iter1 = hasil_iter1_per_plt[plt_name]["model"]
+    scaler_target = scaler_target_regional_per_plt[plt_name]
+
+    X_val_ft = dataset_finetune_per_plt[plt_name]["X_val_ft"]
+    y_val_ft = dataset_finetune_per_plt[plt_name]["y_val_ft"]
+
+    y_pred_scaled_val = model_iter1.predict(X_val_ft, verbose=0)
+    y_pred_asli_val = scaler_target.inverse_transform(y_pred_scaled_val)
+    y_val_asli = scaler_target.inverse_transform(y_val_ft.reshape(-1, 1))
+
+    rmse_val = np.sqrt(mean_squared_error(y_val_asli, y_pred_asli_val))
+    mae_val = mean_absolute_error(y_val_asli, y_pred_asli_val)
+    mape_val = hitung_mape(y_val_asli, y_pred_asli_val)
+
+    evaluasi_iter1_val_per_plt[plt_name] = {"RMSE": rmse_val, "MAE": mae_val, "MAPE": mape_val}
+
+    print(f"{plt_name:12s} -> [VALIDASI] RMSE: {rmse_val:8.3f} | MAE: {mae_val:8.3f} | MAPE: {mape_val:6.2f}%")
+
+hasil_iterasi1_val = pd.DataFrame(evaluasi_iter1_val_per_plt).T
+hasil_iterasi1_val.index.name = "Jenis_PLT"
+hasil_iterasi1_val = hasil_iterasi1_val.reset_index()
+hasil_iterasi1_val = hasil_iterasi1_val.sort_values(by="RMSE", ascending=True).reset_index(drop=True)
 
 # ============================================================
 # KEGIATAN 12: Tabel Perbandingan Fine-Tuning vs Iterasi 1
@@ -1744,6 +1884,39 @@ print("Ringkasan Hasil Evaluasi Iterasi 2 (Window Size = 12 Bulan) per Jenis PLT
 hasil_iterasi2
 
 # ============================================================
+# [TASK GROUP 2] Evaluasi Iterasi 2 pada DATA VALIDASI
+# (X_val_iter2/y_val_iter2, window=12 -- BUKAN X_val_ft, karena Iterasi 2
+# pakai sequence window berbeda). Dipakai untuk PEMILIHAN model terbaik --
+# lihat catatan yang sama di tahap Baseline di atas.
+# ============================================================
+
+evaluasi_iter2_val_per_plt = {}
+
+for plt_name in daftar_plt_final:
+    model_iter2 = hasil_iter2_per_plt[plt_name]["model"]
+    scaler_target = scaler_target_regional_per_plt[plt_name]
+
+    X_val_iter2 = dataset_iter2_per_plt[plt_name]["X_val_iter2"]
+    y_val_iter2 = dataset_iter2_per_plt[plt_name]["y_val_iter2"]
+
+    y_pred_scaled_val = model_iter2.predict(X_val_iter2, verbose=0)
+    y_pred_asli_val = scaler_target.inverse_transform(y_pred_scaled_val)
+    y_val_asli = scaler_target.inverse_transform(y_val_iter2.reshape(-1, 1))
+
+    rmse_val = np.sqrt(mean_squared_error(y_val_asli, y_pred_asli_val))
+    mae_val = mean_absolute_error(y_val_asli, y_pred_asli_val)
+    mape_val = hitung_mape(y_val_asli, y_pred_asli_val)
+
+    evaluasi_iter2_val_per_plt[plt_name] = {"RMSE": rmse_val, "MAE": mae_val, "MAPE": mape_val}
+
+    print(f"{plt_name:12s} -> [VALIDASI] RMSE: {rmse_val:8.3f} | MAE: {mae_val:8.3f} | MAPE: {mape_val:6.2f}%")
+
+hasil_iterasi2_val = pd.DataFrame(evaluasi_iter2_val_per_plt).T
+hasil_iterasi2_val.index.name = "Jenis_PLT"
+hasil_iterasi2_val = hasil_iterasi2_val.reset_index()
+hasil_iterasi2_val = hasil_iterasi2_val.sort_values(by="RMSE", ascending=True).reset_index(drop=True)
+
+# ============================================================
 # KEGIATAN 1: Menentukan Dropout Rate Baru untuk Iterasi 3
 # (Satu-satunya hyperparameter yang diubah pada iterasi ini)
 # ============================================================
@@ -2006,6 +2179,38 @@ print("Ringkasan Hasil Evaluasi Iterasi 3 (Dropout = 0.30) per Jenis PLT:")
 hasil_iterasi3
 
 # ============================================================
+# [TASK GROUP 2] Evaluasi Iterasi 3 pada DATA VALIDASI (X_val_ft/y_val_ft,
+# window sama dengan Fine-Tuning/Iterasi 1). Dipakai untuk PEMILIHAN model
+# terbaik -- lihat catatan yang sama di tahap Baseline di atas.
+# ============================================================
+
+evaluasi_iter3_val_per_plt = {}
+
+for plt_name in daftar_plt_final:
+    model_iter3 = hasil_iter3_per_plt[plt_name]["model"]
+    scaler_target = scaler_target_regional_per_plt[plt_name]
+
+    X_val_ft = dataset_finetune_per_plt[plt_name]["X_val_ft"]
+    y_val_ft = dataset_finetune_per_plt[plt_name]["y_val_ft"]
+
+    y_pred_scaled_val = model_iter3.predict(X_val_ft, verbose=0)
+    y_pred_asli_val = scaler_target.inverse_transform(y_pred_scaled_val)
+    y_val_asli = scaler_target.inverse_transform(y_val_ft.reshape(-1, 1))
+
+    rmse_val = np.sqrt(mean_squared_error(y_val_asli, y_pred_asli_val))
+    mae_val = mean_absolute_error(y_val_asli, y_pred_asli_val)
+    mape_val = hitung_mape(y_val_asli, y_pred_asli_val)
+
+    evaluasi_iter3_val_per_plt[plt_name] = {"RMSE": rmse_val, "MAE": mae_val, "MAPE": mape_val}
+
+    print(f"{plt_name:12s} -> [VALIDASI] RMSE: {rmse_val:8.3f} | MAE: {mae_val:8.3f} | MAPE: {mape_val:6.2f}%")
+
+hasil_iterasi3_val = pd.DataFrame(evaluasi_iter3_val_per_plt).T
+hasil_iterasi3_val.index.name = "Jenis_PLT"
+hasil_iterasi3_val = hasil_iterasi3_val.reset_index()
+hasil_iterasi3_val = hasil_iterasi3_val.sort_values(by="RMSE", ascending=True).reset_index(drop=True)
+
+# ============================================================
 # KEGIATAN 10: Tabel Perbandingan Lengkap Seluruh Tahap
 # (Baseline, Fine-Tuning, Iterasi 1, Iterasi 2, Iterasi 3)
 # + Penentuan Model Terbaik Berdasarkan RMSE dan MAPE Terendah
@@ -2115,6 +2320,37 @@ print("DataFrame Perbandingan Seluruh Model (RMSE, MAE, MAPE) per Jenis PLT:")
 perbandingan_model
 
 # ============================================================
+# [TASK GROUP 2] Tabel Perbandingan Seluruh Model BERDASARKAN DATA VALIDASI
+# (bukan test 2025) -- ini yang dipakai untuk PEMILIHAN model terbaik di
+# KEGIATAN 4/5 di bawah, supaya data test 2025 tidak ikut menentukan model
+# mana yang menang (test-set leakage pada seleksi model).
+# ============================================================
+
+tabel_baseline_val_pm = df_evaluasi_val[["Jenis_PLT", "RMSE", "MAE", "MAPE"]].rename(
+    columns={"RMSE": "RMSE_Baseline_Val", "MAE": "MAE_Baseline_Val", "MAPE": "MAPE_Baseline_Val"}
+)
+tabel_finetuning_val_pm = df_evaluasi_finetune_val[["Jenis_PLT", "RMSE", "MAE", "MAPE"]].rename(
+    columns={"RMSE": "RMSE_FineTuning_Val", "MAE": "MAE_FineTuning_Val", "MAPE": "MAPE_FineTuning_Val"}
+)
+tabel_iterasi1_val_pm = hasil_iterasi1_val[["Jenis_PLT", "RMSE", "MAE", "MAPE"]].rename(
+    columns={"RMSE": "RMSE_Iterasi1_Val", "MAE": "MAE_Iterasi1_Val", "MAPE": "MAPE_Iterasi1_Val"}
+)
+tabel_iterasi2_val_pm = hasil_iterasi2_val[["Jenis_PLT", "RMSE", "MAE", "MAPE"]].rename(
+    columns={"RMSE": "RMSE_Iterasi2_Val", "MAE": "MAE_Iterasi2_Val", "MAPE": "MAPE_Iterasi2_Val"}
+)
+tabel_iterasi3_val_pm = hasil_iterasi3_val[["Jenis_PLT", "RMSE", "MAE", "MAPE"]].rename(
+    columns={"RMSE": "RMSE_Iterasi3_Val", "MAE": "MAE_Iterasi3_Val", "MAPE": "MAPE_Iterasi3_Val"}
+)
+
+perbandingan_model_VALIDASI = tabel_baseline_val_pm.merge(tabel_finetuning_val_pm, on="Jenis_PLT", how="outer") \
+                                                     .merge(tabel_iterasi1_val_pm, on="Jenis_PLT", how="outer") \
+                                                     .merge(tabel_iterasi2_val_pm, on="Jenis_PLT", how="outer") \
+                                                     .merge(tabel_iterasi3_val_pm, on="Jenis_PLT", how="outer")
+
+print("DataFrame Perbandingan Seluruh Model BERDASARKAN VALIDASI (RMSE, MAE, MAPE) per Jenis PLT:")
+perbandingan_model_VALIDASI
+
+# ============================================================
 # KEGIATAN 3: Menghitung Rata-Rata RMSE, MAE, MAPE untuk Setiap Model
 # (Performa keseluruhan, bukan hanya per jenis PLT)
 # ============================================================
@@ -2151,29 +2387,77 @@ ringkasan_model = pd.DataFrame({
 
 ringkasan_model = ringkasan_model.sort_values(by="Average_RMSE", ascending=True).reset_index(drop=True)
 
-print("Ringkasan Rata-Rata Performa Seluruh Model:")
+print("Ringkasan Rata-Rata Performa Seluruh Model (TEST 2025 -- untuk pelaporan/konfirmasi akhir):")
 ringkasan_model
 
 # ============================================================
-# KEGIATAN 4: Menentukan Model Terbaik Berdasarkan Rata-Rata RMSE Terkecil
-# (MAE dan MAPE digunakan sebagai informasi pendukung)
+# [TASK GROUP 2] Ringkasan Rata-Rata Performa BERDASARKAN VALIDASI
+# Ini yang dipakai untuk KEGIATAN 4 (penentuan model_terbaik) di bawah --
+# ringkasan_model (test 2025) di atas TETAP dihitung untuk pelaporan/
+# konfirmasi akhir, bukan lagi dasar pemilihan.
 # ============================================================
 
-# Model terbaik adalah baris pertama setelah diurutkan berdasarkan Average_RMSE (ascending)
-model_terbaik = ringkasan_model.iloc[0]["Model"]
+ringkasan_model_validasi = pd.DataFrame({
+    "Model": daftar_nama_model,
+    "Average_RMSE": [
+        perbandingan_model_VALIDASI["RMSE_Baseline_Val"].mean(),
+        perbandingan_model_VALIDASI["RMSE_FineTuning_Val"].mean(),
+        perbandingan_model_VALIDASI["RMSE_Iterasi1_Val"].mean(),
+        perbandingan_model_VALIDASI["RMSE_Iterasi2_Val"].mean(),
+        perbandingan_model_VALIDASI["RMSE_Iterasi3_Val"].mean(),
+    ],
+    "Average_MAE": [
+        perbandingan_model_VALIDASI["MAE_Baseline_Val"].mean(),
+        perbandingan_model_VALIDASI["MAE_FineTuning_Val"].mean(),
+        perbandingan_model_VALIDASI["MAE_Iterasi1_Val"].mean(),
+        perbandingan_model_VALIDASI["MAE_Iterasi2_Val"].mean(),
+        perbandingan_model_VALIDASI["MAE_Iterasi3_Val"].mean(),
+    ],
+    "Average_MAPE": [
+        perbandingan_model_VALIDASI["MAPE_Baseline_Val"].mean(),
+        perbandingan_model_VALIDASI["MAPE_FineTuning_Val"].mean(),
+        perbandingan_model_VALIDASI["MAPE_Iterasi1_Val"].mean(),
+        perbandingan_model_VALIDASI["MAPE_Iterasi2_Val"].mean(),
+        perbandingan_model_VALIDASI["MAPE_Iterasi3_Val"].mean(),
+    ],
+})
 
-rmse_terbaik = ringkasan_model.iloc[0]["Average_RMSE"]
-mae_pendukung = ringkasan_model.iloc[0]["Average_MAE"]
-mape_pendukung = ringkasan_model.iloc[0]["Average_MAPE"]
+ringkasan_model_validasi = ringkasan_model_validasi.sort_values(by="Average_RMSE", ascending=True).reset_index(drop=True)
 
-print(f"Model Terbaik (berdasarkan Average RMSE terkecil): {model_terbaik}")
-print(f"  - Average RMSE : {rmse_terbaik:.3f}")
-print(f"  - Average MAE  : {mae_pendukung:.3f}  (informasi pendukung)")
-print(f"  - Average MAPE : {mape_pendukung:.2f}%  (informasi pendukung)")
+print("Ringkasan Rata-Rata Performa Seluruh Model (VALIDASI -- dasar pemilihan model_terbaik):")
+ringkasan_model_validasi
+
+# ============================================================
+# KEGIATAN 4: Menentukan Model Terbaik Berdasarkan Rata-Rata RMSE Validasi Terkecil
+# [TASK GROUP 2] Sebelumnya berdasarkan ringkasan_model (test 2025) --
+# sekarang berdasarkan ringkasan_model_validasi supaya data test 2025 tidak
+# ikut menentukan pemenang (lihat catatan di atas). MAE dan MAPE (validasi)
+# digunakan sebagai informasi pendukung; angka test 2025 dicetak terpisah
+# di bawah sebagai KONFIRMASI, bukan alasan pemilihan.
+# ============================================================
+
+# Model terbaik adalah baris pertama setelah diurutkan berdasarkan Average_RMSE VALIDASI (ascending)
+model_terbaik = ringkasan_model_validasi.iloc[0]["Model"]
+
+rmse_terbaik = ringkasan_model_validasi.iloc[0]["Average_RMSE"]
+mae_pendukung = ringkasan_model_validasi.iloc[0]["Average_MAE"]
+mape_pendukung = ringkasan_model_validasi.iloc[0]["Average_MAPE"]
+
+# Angka test 2025 untuk model yang sama, dicetak sebagai konfirmasi akhir (bukan dasar pemilihan)
+baris_test_konfirmasi = ringkasan_model[ringkasan_model["Model"] == model_terbaik].iloc[0]
+
+print(f"Model Terbaik (berdasarkan Average RMSE VALIDASI terkecil): {model_terbaik}")
+print(f"  - Average RMSE (Validasi) : {rmse_terbaik:.3f}")
+print(f"  - Average MAE  (Validasi) : {mae_pendukung:.3f}  (informasi pendukung)")
+print(f"  - Average MAPE (Validasi) : {mape_pendukung:.2f}%  (informasi pendukung)")
+print(f"  - Average RMSE (Test 2025, KONFIRMASI akhir) : {baris_test_konfirmasi['Average_RMSE']:.3f}")
 
 # ============================================================
 # KEGIATAN 5: Menentukan Model Terbaik untuk Setiap Jenis PLT
 # (Untuk melihat apakah model terbaik berbeda antar jenis pembangkit)
+# [TASK GROUP 2] Pemilihan sekarang berdasarkan RMSE VALIDASI per PLT
+# (bukan RMSE test 2025) -- RMSE test 2025 tetap dicantumkan sebagai
+# kolom KONFIRMASI terpisah untuk pelaporan akhir di Bab IV.
 # ============================================================
 
 kolom_rmse_pm = ["RMSE_Baseline", "RMSE_FineTuning", "RMSE_Iterasi1", "RMSE_Iterasi2", "RMSE_Iterasi3"]
@@ -2182,16 +2466,43 @@ peta_nama_model_pm = {
     "RMSE_Iterasi1": "Iterasi1", "RMSE_Iterasi2": "Iterasi2", "RMSE_Iterasi3": "Iterasi3"
 }
 
-model_terbaik_per_plt = perbandingan_model[["Jenis_PLT"] + kolom_rmse_pm].copy()
-model_terbaik_per_plt["Model_Terbaik"] = model_terbaik_per_plt[kolom_rmse_pm].idxmin(axis=1).map(
-    peta_nama_model_pm
+kolom_rmse_val_pm = [
+    "RMSE_Baseline_Val", "RMSE_FineTuning_Val", "RMSE_Iterasi1_Val",
+    "RMSE_Iterasi2_Val", "RMSE_Iterasi3_Val",
+]
+peta_nama_model_val_pm = {
+    "RMSE_Baseline_Val": "Baseline", "RMSE_FineTuning_Val": "FineTuning",
+    "RMSE_Iterasi1_Val": "Iterasi1", "RMSE_Iterasi2_Val": "Iterasi2", "RMSE_Iterasi3_Val": "Iterasi3"
+}
+# Nama kolom RMSE test 2025 yang jadi KONFIRMASI akhir, per nama model_terbaik
+peta_kolom_rmse_test = {
+    "Baseline": "RMSE_Baseline", "FineTuning": "RMSE_FineTuning",
+    "Iterasi1": "RMSE_Iterasi1", "Iterasi2": "RMSE_Iterasi2", "Iterasi3": "RMSE_Iterasi3",
+}
+
+model_terbaik_per_plt = perbandingan_model_VALIDASI[["Jenis_PLT"] + kolom_rmse_val_pm].copy()
+model_terbaik_per_plt["Model_Terbaik"] = model_terbaik_per_plt[kolom_rmse_val_pm].idxmin(axis=1).map(
+    peta_nama_model_val_pm
 )
-model_terbaik_per_plt["RMSE_Terbaik"] = model_terbaik_per_plt[kolom_rmse_pm].min(axis=1)
+model_terbaik_per_plt["RMSE_Validasi_Terbaik"] = model_terbaik_per_plt[kolom_rmse_val_pm].min(axis=1)
 
-model_terbaik_per_plt = model_terbaik_per_plt[["Jenis_PLT", "Model_Terbaik", "RMSE_Terbaik"]] \
-    .sort_values(by="RMSE_Terbaik", ascending=True).reset_index(drop=True)
+# Mengambil RMSE test 2025 milik tahap pemenang (perbandingan_model, test-based)
+# sebagai angka KONFIRMASI akhir -- BUKAN dasar pemilihan.
+perbandingan_model_indexed = perbandingan_model.set_index("Jenis_PLT")
 
-print("Model Terbaik untuk Setiap Jenis PLT (berdasarkan RMSE terkecil):")
+def _ambil_rmse_test_konfirmasi(baris):
+    kolom_test = peta_kolom_rmse_test[baris["Model_Terbaik"]]
+    return perbandingan_model_indexed.loc[baris["Jenis_PLT"], kolom_test]
+
+model_terbaik_per_plt["RMSE_Test_2025_Konfirmasi"] = model_terbaik_per_plt.apply(
+    _ambil_rmse_test_konfirmasi, axis=1
+)
+
+model_terbaik_per_plt = model_terbaik_per_plt[
+    ["Jenis_PLT", "Model_Terbaik", "RMSE_Validasi_Terbaik", "RMSE_Test_2025_Konfirmasi"]
+].sort_values(by="RMSE_Validasi_Terbaik", ascending=True).reset_index(drop=True)
+
+print("Model Terbaik untuk Setiap Jenis PLT (berdasarkan RMSE VALIDASI terkecil; RMSE test 2025 = konfirmasi akhir):")
 model_terbaik_per_plt
 
 # ============================================================
@@ -2363,42 +2674,44 @@ print(f"Folder '{FOLDER_MODEL_FINAL}/' siap digunakan untuk menyimpan model, sca
 print("Model terbaik untuk setiap jenis PLT (hasil tahap Penentuan Model Terbaik):")
 display(model_terbaik_per_plt)
 
-# Menentukan metode pelatihan final untuk setiap jenis PLT sesuai hasil eksperimen
-METODE_FINAL_PER_PLT = {
-    "PLTA": "Transfer Learning",
-    "PLTB": "Transfer Learning",
-    "PLTM": "Direct Training",
-    "PLTMH": "Transfer Learning",
-    "PLTS": "Transfer Learning",
-    "PLTS Atap": "Direct Training",
-    "PLT Hybrid": "Direct Training",
-}
+# [TASK GROUP 3] Metode pelatihan final SEKARANG ditentukan PER PLT dari
+# model_terbaik_per_plt (hasil Task Group 2, berbasis RMSE validasi) --
+# sebelumnya METODE_FINAL_PER_PLT adalah dict hard-coded (snapshot manual
+# dari run lama) yang tidak lagi cocok dengan model_terbaik_per_plt saat
+# ini. Aturan turunannya:
+#   - Kalau Model_Terbaik PLT itu "Baseline" -> selalu "Direct Training"
+#     (tahap Baseline memang tidak pernah memuat bobot Pre-Training).
+#   - Selain itu -> "Transfer Learning" HANYA jika PLT-nya ada di
+#     PLT_TRANSFER_LEARNING (punya data Pre-Training nasional); PLTS Atap
+#     dan PLT Hybrid selalu "Direct Training" apa pun tahap pemenangnya.
+METODE_FINAL_PER_PLT = {}
+for _, baris_terbaik in model_terbaik_per_plt.iterrows():
+    plt_name = baris_terbaik["Jenis_PLT"]
+    stage_menang = baris_terbaik["Model_Terbaik"]
+    if stage_menang == "Baseline":
+        METODE_FINAL_PER_PLT[plt_name] = "Direct Training"
+    elif plt_name in PLT_TRANSFER_LEARNING:
+        METODE_FINAL_PER_PLT[plt_name] = "Transfer Learning"
+    else:
+        METODE_FINAL_PER_PLT[plt_name] = "Direct Training"
 
-print("\nMetode pelatihan Model Final per jenis PLT:")
+print("\nMetode pelatihan Model Final per jenis PLT (diturunkan dari model_terbaik_per_plt):")
 for plt_name, metode in METODE_FINAL_PER_PLT.items():
     print(f"  - {plt_name:12s}: {metode}")
 
-# ============================================================
-# KEGIATAN 1: Menampilkan Tabel Konfigurasi Model Terbaik per Jenis PLT
-# ============================================================
+# [TASK GROUP 3] Konfigurasi hyperparameter final PER PLT -- setiap PLT
+# memakai konfigurasi dari TAHAP yang menang untuk PLT itu sendiri
+# (model_terbaik_per_plt), bukan lagi satu konfigurasi_model_terbaik global
+# yang dipaksakan ke seluruh PLT.
+konfigurasi_terbaik_per_plt = {}
+for _, baris_terbaik in model_terbaik_per_plt.iterrows():
+    plt_name = baris_terbaik["Jenis_PLT"]
+    stage_menang = baris_terbaik["Model_Terbaik"]
+    konfigurasi_terbaik_per_plt[plt_name] = daftar_konfigurasi_model[stage_menang]
 
-print("Model terbaik untuk setiap jenis PLT (hasil tahap Penentuan Model Terbaik):")
-display(model_terbaik_per_plt)
-
-# Menentukan metode pelatihan final untuk setiap jenis PLT sesuai hasil eksperimen
-METODE_FINAL_PER_PLT = {
-    "PLTA": "Transfer Learning",
-    "PLTB": "Transfer Learning",
-    "PLTM": "Direct Training",
-    "PLTMH": "Transfer Learning",
-    "PLTS": "Transfer Learning",
-    "PLTS Atap": "Direct Training",
-    "PLT Hybrid": "Direct Training",
-}
-
-print("\nMetode pelatihan Model Final per jenis PLT:")
-for plt_name, metode in METODE_FINAL_PER_PLT.items():
-    print(f"  - {plt_name:12s}: {metode}")
+print("\nKonfigurasi hyperparameter Model Final per jenis PLT:")
+for plt_name, konfigurasi in konfigurasi_terbaik_per_plt.items():
+    print(f"  - {plt_name:12s}: {konfigurasi}")
 
 import pandas as pd
 import numpy as np
@@ -2445,20 +2758,20 @@ for plt_name in METODE_FINAL_PER_PLT.keys():
 
 # ============================================================
 # KEGIATAN 3: Membentuk Data Sequence dengan create_sequences()
-# (Window size disesuaikan per jenis PLT berdasarkan konfigurasi_model_terbaik)
+# (Window size disesuaikan per jenis PLT berdasarkan konfigurasi terbaik PLT itu sendiri)
 # ============================================================
 
-# Karena konfigurasi terbaik ditentukan per MODEL (bukan per PLT) pada tahap sebelumnya,
-# window size final mengikuti window size dari model_terbaik secara keseluruhan (WINDOW_SIZE_ITER3 = 6),
-# yang juga merupakan window size Baseline/Fine-Tuning/Iterasi 1.
-WINDOW_SIZE_FINAL = konfigurasi_model_terbaik["Window_Size"]
-
+# [TASK GROUP 3] Window size sekarang diambil PER PLT dari
+# konfigurasi_terbaik_per_plt (konfigurasi tahap yang menang untuk PLT itu
+# sendiri) -- sebelumnya satu WINDOW_SIZE_FINAL global dipakai untuk semua
+# PLT, padahal mis. Iterasi2 pakai window 12 bulan, bukan 6.
 sequence_final_per_plt = {}
 
 for plt_name in METODE_FINAL_PER_PLT.keys():
     data_gabungan_scaled = data_scaled_final_per_plt[plt_name]
+    window_size_plt = konfigurasi_terbaik_per_plt[plt_name]["Window_Size"]
 
-    X_seq_final, y_seq_final = create_sequences(data_gabungan_scaled, window_size=WINDOW_SIZE_FINAL)
+    X_seq_final, y_seq_final = create_sequences(data_gabungan_scaled, window_size=window_size_plt)
 
     # Mengambil kolom target (Produksi) saja, yaitu kolom paling akhir
     y_target_final = y_seq_final[:, -1]
@@ -2468,7 +2781,7 @@ for plt_name in METODE_FINAL_PER_PLT.keys():
         "y": y_target_final
     }
 
-    print(f"{plt_name:12s} -> Total sequence (window={WINDOW_SIZE_FINAL}) untuk pelatihan final: {len(X_seq_final)}")
+    print(f"{plt_name:12s} -> Total sequence (window={window_size_plt}) untuk pelatihan final: {len(X_seq_final)}")
 
 # ============================================================
 # KEGIATAN 4: Melatih Model Final - Transfer Learning
@@ -2485,22 +2798,27 @@ N_FEATURES_FINAL = len(FEATURE_COLS_REGIONAL) + 1  # Cuaca, Kapasitas, Produksi 
 for plt_name in PLT_FINAL_TRANSFER_LEARNING:
     print(f"\n=== Melatih Model Final (Transfer Learning) untuk: {plt_name} ===")
 
+    # [TASK GROUP 3] Konfigurasi (window_size, dropout, learning_rate, epochs,
+    # batch_size) sekarang diambil PER PLT dari konfigurasi_terbaik_per_plt,
+    # bukan lagi konfigurasi_model_terbaik global yang sama untuk semua PLT.
+    konfigurasi_plt = konfigurasi_terbaik_per_plt[plt_name]
+
     X_final = sequence_final_per_plt[plt_name]["X"]
     y_final = sequence_final_per_plt[plt_name]["y"]
 
-    # 1. Membangun arsitektur sesuai konfigurasi terbaik (sama seperti Baseline, dropout sesuai konfigurasi)
+    # 1. Membangun arsitektur sesuai konfigurasi terbaik PLT ini (sama seperti Baseline, dropout sesuai konfigurasi)
     model_final = build_baseline_lstm(
-        window_size=WINDOW_SIZE_FINAL,
+        window_size=konfigurasi_plt["Window_Size"],
         n_features=N_FEATURES_FINAL,
-        dropout_rate=konfigurasi_model_terbaik["Dropout"]
+        dropout_rate=konfigurasi_plt["Dropout"]
     )
 
     # 2. Memuat bobot hasil Pre-Training Nasional sebagai bobot awal
     bobot_pretrain = hasil_pretrain_per_plt[plt_name]["model"].get_weights()
     model_final.set_weights(bobot_pretrain)
 
-    # 3. Compile dengan learning rate sesuai konfigurasi terbaik
-    current_learning_rate = konfigurasi_model_terbaik["Learning_Rate"]
+    # 3. Compile dengan learning rate sesuai konfigurasi terbaik PLT ini
+    current_learning_rate = konfigurasi_plt["Learning_Rate"]
     if isinstance(current_learning_rate, str) and current_learning_rate == "default (Adam)":
         # Use Keras default for Adam, which is 0.001
         optimizer_lr = 0.001
@@ -2515,8 +2833,8 @@ for plt_name in PLT_FINAL_TRANSFER_LEARNING:
     # 4. Melatih model menggunakan SELURUH data regional (tanpa validation_data / split test)
     model_final.fit(
         X_final, y_final,
-        epochs=konfigurasi_model_terbaik["Epochs"],
-        batch_size=konfigurasi_model_terbaik["Batch_Size"],
+        epochs=konfigurasi_plt["Epochs"],
+        batch_size=konfigurasi_plt["Batch_Size"],
         callbacks=get_callbacks(),
         verbose=0
     )
@@ -2539,16 +2857,19 @@ PLT_FINAL_DIRECT_TRAINING = [p for p, m in METODE_FINAL_PER_PLT.items() if m == 
 for plt_name in PLT_FINAL_DIRECT_TRAINING:
     print(f"\n=== Melatih Model Final (Direct Training) untuk: {plt_name} ===")
 
+    # [TASK GROUP 3] Konfigurasi PER PLT, sama seperti loop Transfer Learning di atas.
+    konfigurasi_plt = konfigurasi_terbaik_per_plt[plt_name]
+
     X_final = sequence_final_per_plt[plt_name]["X"]
     y_final = sequence_final_per_plt[plt_name]["y"]
 
     # Arsitektur sama seperti Baseline, dilatih dari nol (tanpa bobot Pre-Training)
     model_final_direct = build_baseline_lstm(
-        window_size=WINDOW_SIZE_FINAL,
+        window_size=konfigurasi_plt["Window_Size"],
         n_features=N_FEATURES_FINAL,
-        dropout_rate=konfigurasi_model_terbaik["Dropout"]
+        dropout_rate=konfigurasi_plt["Dropout"]
     )
-    current_learning_rate = konfigurasi_model_terbaik["Learning_Rate"]
+    current_learning_rate = konfigurasi_plt["Learning_Rate"]
     if isinstance(current_learning_rate, str) and current_learning_rate == "default (Adam)":
         optimizer_lr = 0.001  # Keras default for Adam
     else:
@@ -2561,8 +2882,8 @@ for plt_name in PLT_FINAL_DIRECT_TRAINING:
 
     model_final_direct.fit(
         X_final, y_final,
-        epochs=konfigurasi_model_terbaik["Epochs"],
-        batch_size=konfigurasi_model_terbaik["Batch_Size"],
+        epochs=konfigurasi_plt["Epochs"],
+        batch_size=konfigurasi_plt["Batch_Size"],
         callbacks=get_callbacks(),
         verbose=0
     )
@@ -2613,15 +2934,17 @@ for plt_name in METODE_FINAL_PER_PLT.keys():
 metadata_model = {}
 
 for plt_name, info in model_final_per_plt.items():
+    # [TASK GROUP 3] Metadata sekarang mencerminkan konfigurasi PER PLT.
+    konfigurasi_plt = konfigurasi_terbaik_per_plt[plt_name]
     metadata_model[plt_name] = {
         "jenis_plt": plt_name,
         "metode_pelatihan": info["metode"],
-        "window_size": WINDOW_SIZE_FINAL,
-        "learning_rate": konfigurasi_model_terbaik["Learning_Rate"],
-        "dropout": konfigurasi_model_terbaik["Dropout"],
-        "batch_size": konfigurasi_model_terbaik["Batch_Size"],
-        "epochs": konfigurasi_model_terbaik["Epochs"],
-        "optimizer": konfigurasi_model_terbaik["Optimizer"],
+        "window_size": konfigurasi_plt["Window_Size"],
+        "learning_rate": konfigurasi_plt["Learning_Rate"],
+        "dropout": konfigurasi_plt["Dropout"],
+        "batch_size": konfigurasi_plt["Batch_Size"],
+        "epochs": konfigurasi_plt["Epochs"],
+        "optimizer": konfigurasi_plt["Optimizer"],
         "fitur_input": FEATURE_COLS_REGIONAL + [TARGET_COL_REGIONAL],  # termasuk produksi historis sbg fitur
         "target_prediksi": TARGET_COL_REGIONAL,
         "tanggal_pelatihan": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -3089,19 +3412,69 @@ with open(path_config, "w", encoding="utf-8") as f:
 print(f"Konfigurasi model seluruh PLT disimpan ke: {path_config}")
 
 # ============================================================
+# [TASK GROUP 3] Menyusun evaluasi_final.csv
+#
+# Model Final dilatih memakai SELURUH data 2023-2025 TANPA menyisakan data
+# uji (lihat catatan di awal file) -- jadi baris 2025 sudah pernah dilihat
+# model ini saat training, dan mengevaluasinya langsung pada 2025 akan
+# menyesatkan (bukan metrik generalisasi yang jujur, hasilnya pasti
+# terlihat bagus karena in-sample).
+#
+# Sebagai gantinya, evaluasi_final.csv memakai RMSE/MAE/MAPE test 2025 yang
+# SUDAH dihitung di Task Group 2 (RMSE_Test_2025_Konfirmasi di
+# model_terbaik_per_plt) -- itu angka yang genuinely held-out, dari model
+# dengan arsitektur & konfigurasi yang SAMA persis dengan Model Final
+# (sebelum dilatih ulang dengan seluruh data). Ini estimasi performa yang
+# dibawa dari tahap seleksi, BUKAN pengukuran langsung terhadap
+# model_final_per_plt.
+# ============================================================
+
+peta_kolom_mae_test = {
+    "Baseline": "MAE_Baseline", "FineTuning": "MAE_FineTuning",
+    "Iterasi1": "MAE_Iterasi1", "Iterasi2": "MAE_Iterasi2", "Iterasi3": "MAE_Iterasi3",
+}
+peta_kolom_mape_test = {
+    "Baseline": "MAPE_Baseline", "FineTuning": "MAPE_FineTuning",
+    "Iterasi1": "MAPE_Iterasi1", "Iterasi2": "MAPE_Iterasi2", "Iterasi3": "MAPE_Iterasi3",
+}
+
+evaluasi_final = model_terbaik_per_plt[
+    ["Jenis_PLT", "Model_Terbaik", "RMSE_Test_2025_Konfirmasi"]
+].copy()
+evaluasi_final["MAE_Test_2025_Konfirmasi"] = evaluasi_final.apply(
+    lambda baris: perbandingan_model_indexed.loc[baris["Jenis_PLT"], peta_kolom_mae_test[baris["Model_Terbaik"]]],
+    axis=1,
+)
+evaluasi_final["MAPE_Test_2025_Konfirmasi"] = evaluasi_final.apply(
+    lambda baris: perbandingan_model_indexed.loc[baris["Jenis_PLT"], peta_kolom_mape_test[baris["Model_Terbaik"]]],
+    axis=1,
+)
+evaluasi_final = evaluasi_final.rename(columns={"Model_Terbaik": "Metode_Terpilih"})
+evaluasi_final = evaluasi_final.sort_values(by="RMSE_Test_2025_Konfirmasi", ascending=True).reset_index(drop=True)
+
+print("Estimasi performa Model Final per PLT (dibawa dari konfirmasi test 2025 Task Group 2):")
+evaluasi_final
+
+# ============================================================
 # KEGIATAN 5: Menyimpan Seluruh Hasil Evaluasi (CSV) ke evaluation/
 # (Baseline, Fine-Tuning, Iterasi 1-3, Perbandingan Lengkap, Model Terbaik)
 # ============================================================
 
 daftar_evaluasi_disimpan = {
+    "evaluasi_final.csv": evaluasi_final,
     "evaluasi_baseline.csv": df_evaluasi,
     "evaluasi_finetuning.csv": df_evaluasi_finetune,
     "evaluasi_iterasi1.csv": hasil_iterasi1,
     "evaluasi_iterasi2.csv": hasil_iterasi2,
     "evaluasi_iterasi3.csv": hasil_iterasi3,
     "perbandingan_lengkap_seluruh_model.csv": df_perbandingan_lengkap,
-    "ringkasan_rata2_seluruh_model.csv": ringkasan_model,
+    # [TASK GROUP 2] ringkasan_rata2_seluruh_model.csv sekarang berisi
+    # ringkasan_model_validasi (dasar pemilihan model_terbaik), bukan lagi
+    # ringkasan_model (test 2025) -- ringkasan_model test 2025 tetap ada di
+    # perbandingan_lengkap_seluruh_model.csv untuk pelaporan/konfirmasi.
+    "ringkasan_rata2_seluruh_model.csv": ringkasan_model_validasi,
     "model_terbaik_per_plt.csv": model_terbaik_per_plt,
+    "perbandingan_model_VALIDASI.csv": perbandingan_model_VALIDASI,
 }
 
 for nama_file, df in daftar_evaluasi_disimpan.items():
@@ -3134,12 +3507,19 @@ metadata_penelitian = {
     "jenis_plt": list(metadata_model.keys()),
     "periode_data_historis": "2023-2025 (Regional), 2020-2024 (Nasional untuk Pre-Training)",
     "periode_forecasting": "Januari 2026 - Desember 2028",
-    "model_terbaik_keseluruhan": model_terbaik,
-    "konfigurasi_model_terbaik_keseluruhan": konfigurasi_model_terbaik,
+    # [TASK GROUP 3] "model_terbaik_keseluruhan"/"konfigurasi_model_terbaik_keseluruhan"
+    # (satu model/konfigurasi global) DIHAPUS -- sudah tidak representatif
+    # karena tiap jenis PLT sekarang punya konfigurasi final sendiri
+    # (lihat "konfigurasi_final_per_plt" dan "metode_per_plt" di bawah).
+    "konfigurasi_final_per_plt": konfigurasi_final_per_plt,
     "metode_per_plt": {plt: info["metode"] for plt, info in model_final_per_plt.items()},
     "tanggal_dibuat": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     "catatan": "Forecasting menggunakan pendekatan autoregressive dengan asumsi fitur "
-               "Cuaca dan Kapasitas mengikuti Last Observation Carried Forward (LOCF)."
+               "Cuaca dan Kapasitas mengikuti Last Observation Carried Forward (LOCF). "
+               "Konfigurasi model final (window size, learning rate, dropout, batch "
+               "size, epochs, metode) ditentukan PER JENIS PLT berdasarkan RMSE "
+               "validasi masing-masing (lihat konfigurasi_final_per_plt), bukan satu "
+               "konfigurasi tunggal untuk seluruh PLT."
 }
 
 path_metadata_penelitian = os.path.join(ROOT_FOLDER, "metadata_penelitian.json")
