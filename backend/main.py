@@ -13,6 +13,7 @@ berubah.
 Menjalankan:  uvicorn main:app --reload --port 8000   (dari dalam folder backend/)
 Dokumentasi otomatis: http://localhost:8000/docs
 """
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI
@@ -21,14 +22,26 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 import config
+import ml
 from database import get_db, init_db
 from models import DataHistoris
 from routers import data as data_router
+from routers import predict as predict_router
+
+logger = logging.getLogger("siprebar")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    try:
+        ml.load_artefacts()
+        logger.info("Model & scaler LSTM dimuat ke memori (%d jenis PLT).", len(config.JENIS_PLT_VALID))
+    except Exception:
+        # Server tetap jalan supaya /api/health & endpoint CRUD tetap bisa
+        # dites walau artefak model bermasalah -- /api/predict akan menolak
+        # request dengan 503 selama ml belum termuat (lihat routers/predict.py).
+        logger.exception("Gagal memuat model/scaler saat startup. /api/predict akan menolak request.")
     yield
 
 
@@ -54,6 +67,7 @@ app.add_middleware(
 )
 
 app.include_router(data_router.router)
+app.include_router(predict_router.router)
 
 
 @app.get("/api/health", tags=["health"])
@@ -92,7 +106,7 @@ def health(db: Session = Depends(get_db)):
             for plt, cfg in config.load_konfigurasi_model().items()
         }
 
-    siap = db_status["terhubung"] and artefak_lengkap and konfigurasi_model_ada
+    siap = db_status["terhubung"] and artefak_lengkap and konfigurasi_model_ada and ml.is_loaded()
 
     return {
         "status": "ok" if siap else "degraded",
@@ -102,4 +116,5 @@ def health(db: Session = Depends(get_db)):
         "window_size": window_size,
         "artefak_model_lengkap": artefak_lengkap,
         "artefak_per_plt": artefak,
+        "model_termuat_di_memori": ml.is_loaded(),
     }

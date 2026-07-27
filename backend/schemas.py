@@ -40,3 +40,29 @@ class ImportResult(BaseModel):
     baris_diterima: int
     baris_ditolak: int
     pesan: str
+
+
+class TitikDataPrediksi(BaseModel):
+    """Satu baris deret waktu untuk /api/predict.
+
+    Produksi/Kapasitas/Cuaca sengaja Optional (bukan wajib di level skema):
+    baris yang kosong tetap harus LOLOS parsing supaya lapis validasi
+    "kelengkapan fitur" di endpoint bisa menyebutkan baris mana yang kurang,
+    bukan berhenti dengan error 422 generik dari Pydantic.
+    """
+    tanggal: date
+    produksi: float | None = None
+    kapasitas: float | None = None
+    cuaca: float | None = None
+
+
+class PredictRequest(BaseModel):
+    jenis_plt: str
+    data: list[TitikDataPrediksi]
+
+
+class PredictResponse(BaseModel):
+    jenis_plt: str
+    prediksi: float
+    mape_model: float | None
+    peringatan: str | None
