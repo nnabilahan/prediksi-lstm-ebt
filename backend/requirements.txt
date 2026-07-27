@@ -1,0 +1,15 @@
+# Dependensi runtime BACKEND SIPREBAR.
+#
+# Sengaja DIPISAH dari kebutuhan pipeline training (audit/source_fixed/*.py,
+# yang butuh tensorflow/keras/seaborn/statsmodels untuk melatih model).
+# Backend tidak pernah melatih model -- hanya memuat artefak .keras/.pkl yang
+# sudah ada. Dependensi untuk memuat model ditambahkan pada Task Group 7,
+# saat endpoint inferensi dibuat.
+#
+# Install:  pip install -r backend/requirements.txt
+
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+SQLAlchemy==2.0.36
+pandas>=2.2
+pydantic>=2.9

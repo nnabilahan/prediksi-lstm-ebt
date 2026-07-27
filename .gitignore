@@ -33,3 +33,7 @@ audit/results/pipeline_run*/EBT_LSTM_Streamlit/scalers/
 
 __pycache__/
 *.pyc
+
+# Backend: database lokal hasil migrasi (regenerate dengan
+# `python backend/migrate_csv.py`, jadi tidak perlu ikut di-commit).
+backend/*.db
