@@ -1,5 +1,5 @@
 // AUTO-GENERATED oleh audit/analysis/export_dashboard_data.py -- JANGAN EDIT MANUAL.
-// Dibuat ulang: 2026-07-26 14:18
+// Dibuat ulang: 2026-07-27 13:50
 // Sumber data (semua hasil AUDIT, lihat audit/results/ & audit/analysis/):
 //   - Data aktual 2023-2025 : audit/source/DATA_PHASE_3_REGIONAL_MODIFIED.csv
 //     (data REKONSTRUKSI/ESTIMASI -- lihat audit/source/README.md, BUKAN data
@@ -50,7 +50,7 @@ export const RUED_TARGET = {
       "persen": 20.0
     },
     {
-      "year": 2030,
+      "year": 2050,
       "persen": 32.0
     }
   ],

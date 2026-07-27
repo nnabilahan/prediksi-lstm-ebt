@@ -1,5 +1,9 @@
 # Laporan Tugas 2 — Gap Analysis RUED & Baseline Non-DL
 
+**Update 2026-07-27**: angka target & forecast disinkronkan ulang setelah
+commit `ce98f97` (model selection fix) dan koreksi Pasal 9 Perda No. 2 Tahun
+2022 (target 32% berlaku sampai **2050**, bukan 2030).
+
 **Update 2026-07-23**: seluruh angka di dokumen ini sudah dijalankan ulang
 memakai model hasil perbaikan data leakage (lihat
 [`audit_findings.md`](audit_findings.md) bagian 4) — angka sebelumnya
@@ -13,8 +17,8 @@ Output: [`gap_analysis_2026_2028.csv`](gap_analysis_2026_2028.csv), [`gap_analys
 
 ## 1. Gap Analysis vs Target RUED
 
-**Koreksi angka target** (sesuai konfirmasi pengguna, menggantikan `config/target_rued.csv` di repo `prediksi-lstm-ebt` yang statusnya sudah eksplisit ditandai **PLACEHOLDER/fabrikasi** oleh README-nya sendiri):
-- Target RUED Sulsel (Perda No. 2 Tahun 2022): **20% pada 2025**, **32% pada 2030** (bukan 2050).
+**Koreksi angka target** (diverifikasi langsung dari Pasal 9 Perda Provinsi Sulawesi Selatan No. 2 Tahun 2022 tentang RUED-P, menggantikan `config/target_rued.csv` di repo `prediksi-lstm-ebt` yang statusnya sudah eksplisit ditandai **PLACEHOLDER/fabrikasi** oleh README-nya sendiri):
+- Target RUED Sulsel (Perda No. 2 Tahun 2022): **20% pada 2025**, **32% sampai dengan 2050**.
 - Satuan: **persen bauran energi**, mencakup **seluruh sektor energi** (listrik, transportasi, industri, dst) — bukan spesifik sektor kelistrikan.
 
 **Keterbatasan metodologis yang disengaja (bukan diabaikan begitu saja):**
@@ -24,11 +28,11 @@ Forecast model ini hanya mencakup **produksi EBT sektor kelistrikan** (GWh) — 
 
 | Tahun | Target Bauran EBT RUED (%, seluruh sektor) | Forecast EBT Kelistrikan (GWh/tahun) |
 |---|---|---|
-| 2026 | 22.4 (interpolasi linear 20%→32%) | 1.636,32 |
-| 2027 | 24.8 | 1.611,23 |
-| 2028 | 27.2 | 1.609,93 |
+| 2026 | 20.48 (interpolasi linear 20%@2025→32%@2050) | 1.669,99 |
+| 2027 | 20.96 | 1.604,38 |
+| 2028 | 21.44 | 1.610,40 |
 
-Trennya: target RUED terus naik (+2,4 poin persen/tahun), sementara forecast EBT kelistrikan justru **turun/stagnan** dari 2026 ke 2028. Ini konsisten dengan temuan RMSE PLTB yang tinggi di Tugas 1 (LSTM kesulitan menangkap tren PLTB, kontributor produksi terbesar) — layak dibahas di Bab IV/V sebagai catatan bahwa proyeksi kelistrikan saja (tanpa data sektor lain) tidak bisa dipakai untuk menyimpulkan pencapaian/kegagalan target RUED secara keseluruhan.
+Trennya: target RUED terus naik (+0,48 poin persen/tahun), sementara forecast EBT kelistrikan justru **turun/stagnan** dari 2026 ke 2028. Ini konsisten dengan temuan RMSE PLTB yang tinggi di Tugas 1 (LSTM kesulitan menangkap tren PLTB, kontributor produksi terbesar) — layak dibahas di Bab IV/V sebagai catatan bahwa proyeksi kelistrikan saja (tanpa data sektor lain) tidak bisa dipakai untuk menyimpulkan pencapaian/kegagalan target RUED secara keseluruhan.
 
 **Rekomendasi untuk skripsi**: sebut bagian ini sebagai "gap kontekstual" atau "referensi tren", bukan "gap resmi terhadap RUED" — dan cantumkan keterbatasan cakupan (kelistrikan vs seluruh sektor) secara eksplisit di teks maupun judul chart/tabel.
 

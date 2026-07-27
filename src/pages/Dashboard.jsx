@@ -116,7 +116,12 @@ export default function Dashboard({ go }) {
           title="Tren produksi EBT historis"
           subtitle={`Total tahunan ${ANNUAL_ACTUAL[0]?.year}–${lastActual?.year} + proyeksi`}
         >
-          <AnnualChart data={TREND_ANNUAL} height={224} />
+          <div className="space-y-3">
+            <AnnualChart data={TREND_ANNUAL} height={224} />
+            <Note tone="warn">
+              <strong>Data historis 2023–2025 adalah hasil rekonstruksi/estimasi</strong>, bukan observasi langsung yang terverifikasi Dinas ESDM. Fitur Cuaca berupa proxy pola tahun 2023 yang diulang tiap tahun.
+            </Note>
+          </div>
         </Panel>
         <Panel
           className="lg:col-span-7"

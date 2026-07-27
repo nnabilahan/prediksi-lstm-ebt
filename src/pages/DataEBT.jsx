@@ -224,6 +224,11 @@ export default function DataEBT() {
               </tr>
             ))}
           />
+          <div className="p-4" style={{ borderTop: `1px solid ${C.line}` }}>
+            <Note tone="warn">
+              <strong>Dataset ini adalah hasil rekonstruksi/estimasi</strong>, bukan data asli yang terverifikasi Dinas ESDM. Kolom Cuaca berupa proxy pola tahun 2023 yang diulang tiap tahun.
+            </Note>
+          </div>
         </Panel>
 
         {/* Kelola data accordion */}

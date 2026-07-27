@@ -3,7 +3,7 @@ Gap analysis: forecast EBT sektor kelistrikan (2026-2028) vs target RUED
 Provinsi Sulawesi Selatan (Perda No. 2 Tahun 2022).
 
 PENTING -- keterbatasan metodologis yang disengaja, bukan bug:
-Target RUED (20% @ 2025, 32% @ 2030) adalah target BAURAN ENERGI untuk
+Target RUED (20% @ 2025, 32% @ 2050) adalah target BAURAN ENERGI untuk
 SELURUH SEKTOR (listrik, transportasi, industri, rumah tangga, dst), dalam
 satuan PERSEN dari total konsumsi/pasokan energi daerah. Forecast model ini
 HANYA mencakup produksi EBT SEKTOR KELISTRIKAN (GWh), yang merupakan
@@ -44,7 +44,7 @@ FORECAST_YEARS = [2026, 2027, 2028]
 
 
 def interpolate_target(target_df, years):
-    """Interpolasi linear target % RUED antar titik jangkar (2025->20%, 2030->32%)."""
+    """Interpolasi linear target % RUED antar titik jangkar (2025->20%, 2050->32%)."""
     anchor_years = target_df["Tahun"].values.astype(float)
     anchor_values = target_df["Target_Bauran_EBT_Persen"].values.astype(float)
     slope = (anchor_values[1] - anchor_values[0]) / (anchor_years[1] - anchor_years[0])
