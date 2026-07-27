@@ -23,6 +23,7 @@ from sqlalchemy.orm import Session
 import config
 from database import get_db, init_db
 from models import DataHistoris
+from routers import data as data_router
 
 
 @asynccontextmanager
@@ -51,6 +52,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(data_router.router)
 
 
 @app.get("/api/health", tags=["health"])
