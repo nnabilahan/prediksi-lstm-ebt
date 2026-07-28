@@ -1,23 +1,4 @@
 {
-    "PLTS": {
-        "jenis_plt": "PLTS",
-        "metode": "Transfer Learning",
-        "window_size": 12,
-        "learning_rate": 5e-05,
-        "dropout": 0.2,
-        "batch_size": 8,
-        "epochs": 100,
-        "optimizer": "Adam",
-        "fitur_input": [
-            "Cuaca",
-            "Kapasitas",
-            "Produksi"
-        ],
-        "target_prediksi": "Produksi",
-        "nama_file_model": "model_final_PLTS.keras",
-        "nama_file_scaler_fitur": "scaler_fitur_PLTS.pkl",
-        "nama_file_scaler_target": "scaler_target_PLTS.pkl"
-    },
     "PLTM": {
         "jenis_plt": "PLTM",
         "metode": "Transfer Learning",
@@ -36,6 +17,25 @@
         "nama_file_model": "model_final_PLTM.keras",
         "nama_file_scaler_fitur": "scaler_fitur_PLTM.pkl",
         "nama_file_scaler_target": "scaler_target_PLTM.pkl"
+    },
+    "PLTMH": {
+        "jenis_plt": "PLTMH",
+        "metode": "Transfer Learning",
+        "window_size": 6,
+        "learning_rate": 0.0001,
+        "dropout": 0.2,
+        "batch_size": 8,
+        "epochs": 100,
+        "optimizer": "Adam",
+        "fitur_input": [
+            "Cuaca",
+            "Kapasitas",
+            "Produksi"
+        ],
+        "target_prediksi": "Produksi",
+        "nama_file_model": "model_final_PLTMH.keras",
+        "nama_file_scaler_fitur": "scaler_fitur_PLTMH.pkl",
+        "nama_file_scaler_target": "scaler_target_PLTMH.pkl"
     },
     "PLTA": {
         "jenis_plt": "PLTA",
@@ -75,6 +75,25 @@
         "nama_file_scaler_fitur": "scaler_fitur_PLT_Hybrid.pkl",
         "nama_file_scaler_target": "scaler_target_PLT_Hybrid.pkl"
     },
+    "PLTS": {
+        "jenis_plt": "PLTS",
+        "metode": "Direct Training",
+        "window_size": 6,
+        "learning_rate": "default (Adam)",
+        "dropout": 0.2,
+        "batch_size": 8,
+        "epochs": 100,
+        "optimizer": "Adam",
+        "fitur_input": [
+            "Cuaca",
+            "Kapasitas",
+            "Produksi"
+        ],
+        "target_prediksi": "Produksi",
+        "nama_file_model": "model_final_PLTS.keras",
+        "nama_file_scaler_fitur": "scaler_fitur_PLTS.pkl",
+        "nama_file_scaler_target": "scaler_target_PLTS.pkl"
+    },
     "PLTS Atap": {
         "jenis_plt": "PLTS Atap",
         "metode": "Direct Training",
@@ -93,25 +112,6 @@
         "nama_file_model": "model_final_PLTS_Atap.keras",
         "nama_file_scaler_fitur": "scaler_fitur_PLTS_Atap.pkl",
         "nama_file_scaler_target": "scaler_target_PLTS_Atap.pkl"
-    },
-    "PLTMH": {
-        "jenis_plt": "PLTMH",
-        "metode": "Direct Training",
-        "window_size": 6,
-        "learning_rate": "default (Adam)",
-        "dropout": 0.2,
-        "batch_size": 8,
-        "epochs": 100,
-        "optimizer": "Adam",
-        "fitur_input": [
-            "Cuaca",
-            "Kapasitas",
-            "Produksi"
-        ],
-        "target_prediksi": "Produksi",
-        "nama_file_model": "model_final_PLTMH.keras",
-        "nama_file_scaler_fitur": "scaler_fitur_PLTMH.pkl",
-        "nama_file_scaler_target": "scaler_target_PLTMH.pkl"
     },
     "PLTB": {
         "jenis_plt": "PLTB",
