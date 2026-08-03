@@ -1,0 +1,77 @@
+{
+    "judul_penelitian": "Prediksi Produksi Energi Baru Terbarukan (EBT) Sektor Kelistrikan Provinsi Sulawesi Selatan Menggunakan LSTM dengan Transfer Learning",
+    "metodologi": "CRISP-DM",
+    "jenis_plt": [
+        "Solar",
+        "Wind",
+        "Hydro"
+    ],
+    "periode_data_historis": "2023-2025 (Regional), 2020-2024 (Nasional untuk Pre-Training)",
+    "periode_forecasting": "Januari 2026 - Desember 2028",
+    "konfigurasi_final_per_plt": {
+        "Solar": {
+            "jenis_plt": "Solar",
+            "metode": "Direct Training",
+            "window_size": 6,
+            "learning_rate": "default (Adam)",
+            "dropout": 0.2,
+            "batch_size": 8,
+            "epochs": 100,
+            "optimizer": "Adam",
+            "fitur_input": [
+                "Cuaca",
+                "Kapasitas",
+                "Produksi"
+            ],
+            "target_prediksi": "Produksi",
+            "nama_file_model": "model_final_Solar.keras",
+            "nama_file_scaler_fitur": "scaler_fitur_Solar.pkl",
+            "nama_file_scaler_target": "scaler_target_Solar.pkl"
+        },
+        "Wind": {
+            "jenis_plt": "Wind",
+            "metode": "Direct Training",
+            "window_size": 6,
+            "learning_rate": "default (Adam)",
+            "dropout": 0.2,
+            "batch_size": 8,
+            "epochs": 100,
+            "optimizer": "Adam",
+            "fitur_input": [
+                "Cuaca",
+                "Kapasitas",
+                "Produksi"
+            ],
+            "target_prediksi": "Produksi",
+            "nama_file_model": "model_final_Wind.keras",
+            "nama_file_scaler_fitur": "scaler_fitur_Wind.pkl",
+            "nama_file_scaler_target": "scaler_target_Wind.pkl"
+        },
+        "Hydro": {
+            "jenis_plt": "Hydro",
+            "metode": "Direct Training",
+            "window_size": 6,
+            "learning_rate": "default (Adam)",
+            "dropout": 0.2,
+            "batch_size": 8,
+            "epochs": 100,
+            "optimizer": "Adam",
+            "fitur_input": [
+                "Cuaca",
+                "Kapasitas",
+                "Produksi"
+            ],
+            "target_prediksi": "Produksi",
+            "nama_file_model": "model_final_Hydro.keras",
+            "nama_file_scaler_fitur": "scaler_fitur_Hydro.pkl",
+            "nama_file_scaler_target": "scaler_target_Hydro.pkl"
+        }
+    },
+    "metode_per_plt": {
+        "Solar": "Direct Training",
+        "Wind": "Direct Training",
+        "Hydro": "Direct Training"
+    },
+    "tanggal_dibuat": "2026-08-03 23:49:35",
+    "catatan": "Forecasting menggunakan pendekatan autoregressive dengan asumsi fitur Cuaca dan Kapasitas mengikuti Last Observation Carried Forward (LOCF). Konfigurasi model final (window size, learning rate, dropout, batch size, epochs, metode) ditentukan PER JENIS PLT berdasarkan RMSE validasi masing-masing (lihat konfigurasi_final_per_plt), bukan satu konfigurasi tunggal untuk seluruh PLT."
+}

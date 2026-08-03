@@ -45,6 +45,74 @@ periode data uji varian lain, dan membuat Baseline sekarang divalidasi
 memakai `X_val`/`y_val` saat training (sebelumnya divalidasi memakai
 `X_test`/`y_test`, yang juga merupakan jalur leakage tersendiri).
 
+## CATATAN DATASET V2/V3 (rekonstruksi dataset)
+
+Dataset lama (`DATA_PHASE_3_REGIONAL_MODIFIED.csv` dan
+`DATA_PHASE_2_NASIONAL_FINAL.csv`) diganti dengan dataset hasil rekonstruksi
+ulang. Perubahan yang menyentuh kode ditandai komentar "[DATASET V2/V3]":
+
+1. Path dataset:
+   - regional : `DATA_REGIONAL_DISAGREGASI_V3.csv` (2023-2025, 3 kategori)
+   - nasional : `DATA_NASIONAL_DISAGREGASI_V2.csv` (2013-2023, 3 kategori)
+2. Kategori PLT disederhanakan dari 7 jenis (PLTA, PLTM, PLTMH, PLTS,
+   PLTS Atap, PLTB, PLT Hybrid) menjadi 3 kategori inti:
+   Hydro (PLTA+PLTM), Solar (PLTS+PLTS Atap), Wind (PLTB).
+   PLTMH dan PLT Hybrid dikeluarkan dari scope penelitian.
+   Konsekuensinya `PLT_DIRECT_TRAINING` menjadi kosong -- ketiga kategori
+   punya padanan nasional, jadi semuanya lewat Transfer Learning.
+3. Split Pre-Training nasional digeser mengikuti cakupan baru:
+   train = 2013-2021, validasi = 2022-2023 (lihat
+   `TAHUN_AKHIR_TRAIN_NASIONAL` / `TAHUN_VALIDASI_NASIONAL`).
+   Split regional TIDAK berubah: train+val = 2023-2024, test = 2025 --
+   sekarang datanya riil (2025 sudah dikonfirmasi Dinas ESDM), bukan hasil
+   proyeksi seperti sebelumnya.
+
+Karena datasetnya berbeda, seluruh angka RMSE/MAE/MAPE TIDAK bisa
+dibandingkan langsung dengan hasil run sebelumnya di
+`audit/results/eval_summary*.csv` -- itu perbandingan antar-dataset, bukan
+antar-perbaikan kode.
+
+## CATATAN CF FIX (target model: Capacity Factor, bukan Produksi mentah)
+
+Setelah retraining dengan dataset V2/V3, ditemukan Transfer Learning kalah
+dari Baseline (LSTM univariate tanpa bobot Pre-Training) di ketiga kategori,
+dan LSTM kalah dari naive persistence/ARIMA di ketiga kategori juga (lihat
+`audit/results/dataset_v3_findings.md`). Salah satu kandidat penyebab:
+Produksi nasional dan regional berbeda ordo besar (ribuan vs ratusan GWh),
+sehingga bobot Pre-Training yang dimuat ke model regional (Transfer
+Learning) berisiko *negative transfer* -- skala targetnya tidak sebanding.
+
+Perbaikan yang diuji: target model diganti dari `Produksi` (GWh mentah)
+menjadi `CF` (Capacity Factor = Produksi x 1000 / (Kapasitas x
+jam_dalam_bulan), lihat `hitung_capacity_factor()` di bawah). CF bernilai
+~0-1 baik di data nasional maupun regional, sehingga transfer bobot antar
+skala jadi lebih masuk akal secara fisis. Perubahan ini ditandai komentar
+"[CF FIX]" di kodenya, mencakup:
+
+1. Kolom `CF` ditambahkan ke df/df_nasional/df_regional setelah load.
+2. `FEATURE_COL`/`TARGET_COL` (Baseline), `TARGET_COL_NASIONAL`
+   (Pre-Training), `TARGET_COL_REGIONAL` (Fine-Tuning/Iterasi 1-3/Final)
+   semuanya diarahkan ke `"CF"` (sebelumnya `"Produksi"`). Fitur input
+   (Cuaca, Kapasitas) TIDAK berubah.
+3. Metrik test 2025 (RMSE/MAE/MAPE di eval_summary.csv, evaluasi_final.csv)
+   tetap dilaporkan dalam GWh -- dikonversi balik dari CF pakai
+   `cf_test_ke_gwh()` right after setiap `inverse_transform()` pada data uji,
+   supaya tetap sebanding dengan hasil sebelum CF FIX dan dengan baseline
+   ARIMA/naive di `baseline_compare.py`. RMSE validasi (dipakai untuk
+   pemilihan model terbaik per kategori) TETAP di skala CF -- tidak masalah
+   karena perbandingan hanya dilakukan dalam satu kategori sekaligus
+   (skala/Kapasitas relatif konstan sepanjang periode validasi 1 kategori).
+4. Forecast 2026-2028 dikonversi balik ke GWh pakai `cf_ke_produksi()`,
+   dengan Kapasitas diasumsikan tetap di level LOCF (sama seperti asumsi
+   fitur Cuaca/Kapasitas lain di `forecast_autoregressive()`).
+5. Backend (`backend/ml.py`) ikut diperbarui: input historis dikonversi ke
+   CF sebelum di-scale, prediksi CF dikonversi balik ke GWh pakai Kapasitas
+   & panjang bulan prediksi.
+
+Dijalankan di folder run terpisah (`pipeline_run_v3_cf/`, lihat
+`RUN_DIR_NAME` di `audit/run_pipeline_fixed.py`) supaya hasil sebelum/sesudah
+CF FIX tetap bisa dibandingkan berdampingan.
+
 LIBRARAY
 """
 
@@ -69,6 +137,34 @@ from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 # Library untuk evaluasi model
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 
+# [CF FIX] Target model diganti dari Produksi mentah (GWh) menjadi Capacity
+# Factor (CF) -- proporsi produksi terhadap potensi maksimum kapasitas
+# terpasang pada bulan itu. Alasan: Produksi nasional dan regional berbeda
+# ordo besar (ribuan vs ratusan GWh), sehingga bobot Pre-Training nasional
+# yang dimuat ke model regional (Transfer Learning) berisiko "negative
+# transfer" -- title/skala targetnya tidak sebanding. CF menyamakan skala
+# (nasional maupun regional sama-sama berkisar ~0-1) sehingga transfer bobot
+# lebih masuk akal secara fisis. Lihat audit/results/dataset_v3_findings.md
+# untuk analisis yang memicu perubahan ini.
+def hitung_capacity_factor(produksi, kapasitas, tanggal):
+    """CF = Produksi(GWh) x 1000 / (Kapasitas(MW) x jam_dalam_bulan).
+
+    Bernilai ~0-1 secara fisis (proporsi energi yang benar-benar dihasilkan
+    terhadap potensi maksimum kalau pembangkit berjalan 100% kapasitas
+    sepanjang bulan itu). `tanggal` dipakai untuk menghitung jam_dalam_bulan
+    (28-31 hari x 24 jam) supaya bulan Februari tidak diperlakukan sama
+    dengan Januari.
+    """
+    jam_dalam_bulan = pd.DatetimeIndex(pd.to_datetime(tanggal)).days_in_month * 24
+    return (np.asarray(produksi, dtype=float) * 1000) / (np.asarray(kapasitas, dtype=float) * jam_dalam_bulan)
+
+
+def cf_ke_produksi(cf, kapasitas, tanggal):
+    """Inverse dari hitung_capacity_factor(): CF -> Produksi (GWh)."""
+    jam_dalam_bulan = pd.DatetimeIndex(pd.to_datetime(tanggal)).days_in_month * 24
+    return np.asarray(cf, dtype=float) * np.asarray(kapasitas, dtype=float) * jam_dalam_bulan / 1000
+
+
 # Mengatur random seed agar hasil eksperimen konsisten (reproducible)
 SEED = 42
 np.random.seed(SEED)
@@ -85,7 +181,7 @@ print("TensorFlow version:", tf.__version__)
 
 # Path dataset regional Sulawesi Selatan
 # Silakan sesuaikan path file dengan lokasi dataset pada Google Drive/Colab
-DATASET_PATH = "DATA_PHASE_3_REGIONAL_MODIFIED.csv"
+DATASET_PATH = "DATA_REGIONAL_DISAGREGASI_V3.csv"
 
 # Membaca dataset
 df = pd.read_csv(DATASET_PATH)
@@ -130,14 +226,44 @@ df["Tanggal"] = pd.to_datetime(df["Tanggal"])
 # 2. Mengurutkan data berdasarkan jenis PLT lalu berdasarkan waktu (tanggal)
 df = df.sort_values(by=["Jenis", "Tanggal"]).reset_index(drop=True)
 
+# [CF FIX] Menghitung kolom Capacity Factor -- lihat definisi
+# hitung_capacity_factor() di awal file untuk alasan & formulanya.
+df["CF"] = hitung_capacity_factor(df["Produksi"], df["Kapasitas"], df["Tanggal"])
+
+# [CF FIX] KAPASITAS_2025_PER_PLT & JAM_TEST_2025 dipakai berulang di seluruh
+# tahap (Baseline, Fine-Tuning, Iterasi 1-3) untuk mengubah kembali hasil
+# prediksi CF pada data uji 2025 menjadi GWh (RMSE/MAE dilaporkan dalam GWh
+# supaya tetap sebanding dengan hasil sebelum CF FIX dan dengan ARIMA/naive
+# di baseline_compare.py; MAPE tidak terpengaruh unit karena skala-invarian).
+# Kapasitas konstan sepanjang tahun 2025 di dataset ini (satu nilai per
+# kategori per tahun), jadi cukup 1 scalar per kategori.
+KAPASITAS_2025_PER_PLT = (
+    df[df["Tanggal"].dt.year == 2025]
+    .drop_duplicates("Jenis")
+    .set_index("Jenis")["Kapasitas"]
+    .to_dict()
+)
+JAM_TEST_2025 = pd.date_range("2025-01-01", "2025-12-01", freq="MS").days_in_month.values * 24
+
+
+def cf_test_ke_gwh(cf_array, plt_name):
+    """CF (hasil inverse_transform pada data uji 2025) -> GWh, asumsi test
+    selalu 12 titik berurutan Jan-Des 2025 (berlaku di seluruh tahap regional
+    -- lihat mask_test = tahun==2025 di setiap split)."""
+    cf_array = np.asarray(cf_array, dtype=float).flatten()
+    kapasitas = KAPASITAS_2025_PER_PLT[plt_name]
+    return cf_array * kapasitas * JAM_TEST_2025[: len(cf_array)] / 1000
+
+
 # Menampilkan data setelah diurutkan
 df.head(10)
 # 3. Menentukan fitur input dan target
 # Pada baseline LSTM ini digunakan pendekatan univariate time series:
-#   - fitur (X) = nilai produksi EBT itu sendiri (lag/sliding window)
-#   - target (y) = nilai produksi EBT pada bulan berikutnya
-FEATURE_COL = "Produksi"
-TARGET_COL = "Produksi"
+#   - fitur (X) = Capacity Factor itu sendiri (lag/sliding window)
+#   - target (y) = Capacity Factor pada bulan berikutnya
+# [CF FIX] Sebelumnya "Produksi" (GWh mentah) -- lihat catatan CF FIX di awal file.
+FEATURE_COL = "CF"
+TARGET_COL = "CF"
 
 # Mengambil daftar unik jenis PLT yang akan diproses satu per satu
 daftar_plt = df["Jenis"].unique()
@@ -403,9 +529,15 @@ for plt_name in daftar_plt:
     # Melakukan prediksi pada data uji (masih dalam skala normalisasi 0-1)
     y_pred_scaled = model.predict(X_test, verbose=0)
 
-    # Mengembalikan hasil prediksi dan data aktual ke skala asli (GWh)
+    # Mengembalikan hasil prediksi dan data aktual ke skala asli (CF)
     y_pred_asli = scaler.inverse_transform(y_pred_scaled)
     y_test_asli = scaler.inverse_transform(y_test.reshape(-1, 1))
+
+    # [CF FIX] Data uji selalu 12 bulan Jan-Des 2025 (lihat mask_test di atas)
+    # -- konversi CF -> GWh supaya RMSE/MAE dilaporkan dalam satuan yang
+    # sebanding dengan hasil sebelum CF FIX dan dengan baseline ARIMA/naive.
+    y_pred_asli = cf_test_ke_gwh(y_pred_asli, plt_name)
+    y_test_asli = cf_test_ke_gwh(y_test_asli, plt_name)
 
     # Menyimpan hasil prediksi dan aktual (skala asli) ke dictionary
     hasil_prediksi_per_plt[plt_name] = {
@@ -540,7 +672,7 @@ import pandas as pd
 
 # Path dataset nasional (2020-2024)
 # Sesuaikan path dan nama file dengan dataset nasional yang sebenarnya digunakan
-DATASET_NASIONAL_PATH = "DATA_PHASE_2_NASIONAL_FINAL.csv"
+DATASET_NASIONAL_PATH = "DATA_NASIONAL_DISAGREGASI_V2.csv"
 
 # Membaca dataset nasional
 df_nasional = pd.read_csv(DATASET_NASIONAL_PATH)
@@ -577,11 +709,24 @@ df_nasional["Tanggal"] = pd.to_datetime(df_nasional["Tanggal"])
 # 2. Mengurutkan data berdasarkan jenis PLT lalu berdasarkan waktu
 df_nasional = df_nasional.sort_values(by=["Jenis", "Tanggal"]).reset_index(drop=True)
 
+# [CF FIX] lihat hitung_capacity_factor() di awal file.
+df_nasional["CF"] = hitung_capacity_factor(df_nasional["Produksi"], df_nasional["Kapasitas"], df_nasional["Tanggal"])
+
 # 3. Menentukan fitur input dan target
 #    Fitur input : Cuaca dan Kapasitas
-#    Target      : Produksi
+#    Target      : Capacity Factor (CF) -- [CF FIX] sebelumnya Produksi
+#    mentah (GWh); lihat catatan CF FIX di awal file untuk alasannya.
 FEATURE_COLS_NASIONAL = ["Cuaca", "Kapasitas"]
-TARGET_COL_NASIONAL = "Produksi"
+TARGET_COL_NASIONAL = "CF"
+
+# [DATASET V2] Dataset nasional baru (DATA_NASIONAL_DISAGREGASI_V2.csv)
+# mencakup 2013-2023, bukan lagi 2020-2024 seperti DATA_PHASE_2_NASIONAL_FINAL.csv.
+# Batas train/validasi Pre-Training digeser mengikuti cakupan baru:
+#   train = 2013-2021 (9 tahun), validasi = 2022-2023 (2 tahun / 24 titik).
+# Dipilih 2 tahun validasi (bukan 1 tahun seperti skema lama) supaya sinyal
+# EarlyStopping/ReduceLROnPlateau tidak terlalu berisik pada sample sekecil ini.
+TAHUN_AKHIR_TRAIN_NASIONAL = 2021
+TAHUN_VALIDASI_NASIONAL = (2022, 2023)
 
 # Daftar jenis PLT pada dataset nasional
 daftar_plt_nasional = df_nasional["Jenis"].unique()
@@ -603,12 +748,12 @@ for plt_name in daftar_plt_nasional:
     scaler_fitur = MinMaxScaler(feature_range=(0, 1))
     scaler_target = MinMaxScaler(feature_range=(0, 1))
 
-    # [FIX LEAKAGE #2] Sebelumnya: fit_transform pada SELURUH data_plt
-    # (2020-2024), termasuk tahun 2024 yang dipakai sebagai data validasi
-    # (lihat KEGIATAN 4 di bawah: mask_train = tahun<=2023, mask_val =
-    # tahun==2024). Sekarang: scaler HANYA di-fit dari baris tahun <=2023
-    # (periode train), lalu dipakai transform ke seluruh data_plt.
-    train_mask_plt = (data_plt["Tanggal"].dt.year <= 2023).values
+    # [FIX LEAKAGE #2] Sebelumnya: fit_transform pada SELURUH data_plt,
+    # termasuk tahun-tahun yang dipakai sebagai data validasi (lihat
+    # KEGIATAN 4 di bawah). Sekarang: scaler HANYA di-fit dari baris periode
+    # train, lalu dipakai transform ke seluruh data_plt.
+    # [DATASET V2] Batas train mengikuti TAHUN_AKHIR_TRAIN_NASIONAL (2021).
+    train_mask_plt = (data_plt["Tanggal"].dt.year <= TAHUN_AKHIR_TRAIN_NASIONAL).values
     scaler_fitur.fit(fitur_plt[train_mask_plt])
     scaler_target.fit(target_plt[train_mask_plt])
     fitur_scaled = scaler_fitur.transform(fitur_plt)
@@ -661,8 +806,8 @@ for plt_name in daftar_plt_nasional:
 
 # ============================================================
 # KEGIATAN 4: Split Data Berdasarkan Waktu (Tanpa Pengacakan)
-# Train (Pre-Training) : 2020-2023
-# Validasi              : 2024
+# [DATASET V2] Train (Pre-Training) : 2013-2021
+#              Validasi              : 2022-2023
 # ============================================================
 
 dataset_pretrain_per_plt = {}
@@ -673,8 +818,8 @@ for plt_name in daftar_plt_nasional:
     tanggal_target = pd.to_datetime(sequence_nasional_per_plt[plt_name]["tanggal_target"])
 
     # Membuat mask berdasarkan tahun pada tanggal target (bukan tanggal awal window)
-    mask_train = tanggal_target.year <= 2023
-    mask_val = tanggal_target.year == 2024
+    mask_train = tanggal_target.year <= TAHUN_AKHIR_TRAIN_NASIONAL
+    mask_val = tanggal_target.year.isin(TAHUN_VALIDASI_NASIONAL)
 
     X_train = X_seq[mask_train]
     y_train = y_seq[mask_train]
@@ -688,7 +833,8 @@ for plt_name in daftar_plt_nasional:
         "y_val": y_val,
     }
 
-    print(f"{plt_name:8s} -> Train (2020-2023): {len(X_train):3d} | Validasi (2024): {len(X_val):3d}")
+    print(f"{plt_name:8s} -> Train (2013-{TAHUN_AKHIR_TRAIN_NASIONAL}): {len(X_train):3d} | "
+          f"Validasi ({TAHUN_VALIDASI_NASIONAL[0]}-{TAHUN_VALIDASI_NASIONAL[-1]}): {len(X_val):3d}")
 
 # ============================================================
 # KEGIATAN 5: Menggunakan Kembali Arsitektur Baseline LSTM
@@ -713,7 +859,7 @@ print("Callback EarlyStopping dan ReduceLROnPlateau siap digunakan untuk proses 
 
 # ============================================================
 # KEGIATAN 7: Pre-Training Model Secara Terpisah per Jenis PLT
-# (PLTA, PLTB, PLTM, PLTMH, PLTS)
+# (Hydro, Solar, Wind)
 # ============================================================
 
 hasil_pretrain_per_plt = {}
@@ -865,7 +1011,7 @@ df_evaluasi_pretrain
 
 # Path dataset regional Sulawesi Selatan (versi lengkap dengan fitur Cuaca & Kapasitas)
 # Sesuaikan dengan dataset regional final yang digunakan pada penelitian
-DATASET_REGIONAL_FT_PATH = "DATA_PHASE_3_REGIONAL_MODIFIED.csv"
+DATASET_REGIONAL_FT_PATH = "DATA_REGIONAL_DISAGREGASI_V3.csv"
 
 df_regional = pd.read_csv(DATASET_REGIONAL_FT_PATH)
 
@@ -899,9 +1045,13 @@ df_regional["Tanggal"] = pd.to_datetime(df_regional["Tanggal"])
 # 2. Mengurutkan data berdasarkan jenis PLT lalu waktu
 df_regional = df_regional.sort_values(by=["Jenis", "Tanggal"]).reset_index(drop=True)
 
-# 3. Fitur input (Cuaca, Kapasitas) dan target (Produksi) — sama seperti Pre-Training
+# [CF FIX] lihat hitung_capacity_factor() di awal file.
+df_regional["CF"] = hitung_capacity_factor(df_regional["Produksi"], df_regional["Kapasitas"], df_regional["Tanggal"])
+
+# 3. Fitur input (Cuaca, Kapasitas) dan target (Capacity Factor) — sama
+# skema dengan Pre-Training. [CF FIX] target sebelumnya Produksi mentah.
 FEATURE_COLS_REGIONAL = ["Cuaca", "Kapasitas"]
-TARGET_COL_REGIONAL = "Produksi"
+TARGET_COL_REGIONAL = "CF"
 
 daftar_plt_regional = df_regional["Jenis"].unique()
 print("Jenis PLT pada dataset regional:", daftar_plt_regional)
@@ -1018,13 +1168,18 @@ for plt_name in daftar_plt_regional:
 
 # ============================================================
 # KEGIATAN 5: Fine-Tuning dengan Bobot Pre-Training sebagai Bobot Awal
-# Berlaku untuk: PLTA, PLTB, PLTM, PLTMH, PLTS
+# Berlaku untuk: seluruh kategori di PLT_TRANSFER_LEARNING (Hydro, Solar, Wind)
 # ============================================================
 
 from tensorflow.keras.optimizers import Adam  # import baru: dibutuhkan untuk mengatur learning rate kecil
 
-# Daftar PLT yang memiliki hasil Pre-Training pada data nasional
-PLT_TRANSFER_LEARNING = ["PLTA", "PLTB", "PLTM", "PLTMH", "PLTS"]
+# Daftar PLT yang memiliki hasil Pre-Training pada data nasional.
+# [DATASET V2/V3] Skema kategori disederhanakan dari 7 jenis PLT menjadi 3
+# kategori inti (Hydro = PLTA+PLTM, Solar = PLTS+PLTS Atap, Wind = PLTB);
+# PLTMH dan PLT Hybrid dikeluarkan dari scope penelitian. Ketiga kategori
+# tersedia di dataset nasional MAUPUN regional, jadi semuanya lewat jalur
+# Transfer Learning dan PLT_DIRECT_TRAINING sekarang kosong.
+PLT_TRANSFER_LEARNING = ["Hydro", "Solar", "Wind"]
 
 # Jumlah fitur regional HARUS SAMA dengan jumlah fitur nasional agar bobot bisa dimuat
 N_FEATURES_REGIONAL = len(FEATURE_COLS_REGIONAL) + 1  # Cuaca, Kapasitas, Produksi historis
@@ -1073,10 +1228,14 @@ for plt_name in PLT_TRANSFER_LEARNING:
 
 # ============================================================
 # KEGIATAN 6: Direct Training untuk PLT Tanpa Data Nasional
-# Berlaku untuk: PLTS Atap, PLT Hybrid (TIDAK memuat bobot Pre-Training)
+# Berlaku untuk: PLT_DIRECT_TRAINING -- [DATASET V2/V3] sekarang KOSONG,
+# jadi loop ini tidak berjalan (dipertahankan agar struktur tahapan utuh)
 # ============================================================
 
-PLT_DIRECT_TRAINING = ["PLTS Atap", "PLT Hybrid"]
+# [DATASET V2/V3] Kosong: seluruh kategori (Hydro/Solar/Wind) punya padanan
+# di dataset nasional, jadi tidak ada lagi kategori yang harus dilatih dari
+# nol tanpa bobot Pre-Training. Loop di bawah otomatis tidak berjalan.
+PLT_DIRECT_TRAINING = []
 
 for plt_name in PLT_DIRECT_TRAINING:
     print(f"\n=== Direct Training (Tanpa Transfer Learning) untuk: {plt_name} ===")
@@ -1162,6 +1321,10 @@ for plt_name in daftar_plt_final:
 
     y_pred_asli = scaler_target.inverse_transform(y_pred_scaled)
     y_test_asli = scaler_target.inverse_transform(y_test.reshape(-1, 1))
+
+    # [CF FIX] konversi CF -> GWh (lihat cf_test_ke_gwh() di tahap Baseline).
+    y_pred_asli = cf_test_ke_gwh(y_pred_asli, plt_name)
+    y_test_asli = cf_test_ke_gwh(y_test_asli, plt_name)
 
     hasil_prediksi_finetune_per_plt[plt_name] = {
         "y_test_asli": y_test_asli.flatten(),
@@ -1269,7 +1432,7 @@ df_evaluasi_finetune_val = df_evaluasi_finetune_val.sort_values(by="RMSE", ascen
 # ============================================================
 
 # Menggabungkan hasil Baseline (df_evaluasi) dan Fine-Tuning (df_evaluasi_finetune)
-# berdasarkan Jenis_PLT. Catatan: PLTS Atap dan PLT Hybrid tidak memiliki hasil Baseline
+# berdasarkan Jenis_PLT. [DATASET V2/V3] Seluruh kategori kini punya hasil Baseline,
 # jika sebelumnya belum tersedia pada dataset Baseline (akan tampil NaN pada RMSE_Baseline).
 df_perbandingan = pd.merge(
     df_evaluasi[["Jenis_PLT", "RMSE", "MAE", "MAPE"]].rename(
@@ -1340,7 +1503,7 @@ for plt_name in daftar_plt_final:
 
 # ============================================================
 # KEGIATAN 5: Iterasi 1 - Transfer Learning dengan Learning Rate Baru
-# Berlaku untuk: PLTA, PLTB, PLTM, PLTMH, PLTS
+# Berlaku untuk: seluruh kategori di PLT_TRANSFER_LEARNING (Hydro, Solar, Wind)
 # (Arsitektur, bobot awal Pre-Training, dan data SAMA seperti Fine-Tuning;
 #  yang berbeda HANYA learning rate)
 # ============================================================
@@ -1385,7 +1548,7 @@ for plt_name in PLT_TRANSFER_LEARNING:
 
 # ============================================================
 # KEGIATAN 6: Iterasi 1 - Direct Training dengan Learning Rate Baru
-# Berlaku untuk: PLTS Atap, PLT Hybrid (tetap TANPA bobot Pre-Training)
+# Berlaku untuk: PLT_DIRECT_TRAINING -- [DATASET V2/V3] sekarang KOSONG
 # ============================================================
 
 for plt_name in PLT_DIRECT_TRAINING:
@@ -1460,6 +1623,10 @@ for plt_name in daftar_plt_final:
 
     y_pred_asli_iter1 = scaler_target.inverse_transform(y_pred_scaled_iter1)
     y_test_asli_iter1 = scaler_target.inverse_transform(y_test.reshape(-1, 1))
+
+    # [CF FIX] konversi CF -> GWh (lihat cf_test_ke_gwh() di tahap Baseline).
+    y_pred_asli_iter1 = cf_test_ke_gwh(y_pred_asli_iter1, plt_name)
+    y_test_asli_iter1 = cf_test_ke_gwh(y_test_asli_iter1, plt_name)
 
     hasil_prediksi_iter1_per_plt[plt_name] = {
         "y_test_asli": y_test_asli_iter1.flatten(),
@@ -1696,7 +1863,7 @@ for plt_name in daftar_plt_final:
 
 # ============================================================
 # KEGIATAN 5: Iterasi 2 - Transfer Learning dengan Window Size 12 Bulan
-# Berlaku untuk: PLTA, PLTB, PLTM, PLTMH, PLTS
+# Berlaku untuk: seluruh kategori di PLT_TRANSFER_LEARNING (Hydro, Solar, Wind)
 # (Bobot Pre-Training tetap dapat dimuat karena tidak bergantung pada window size)
 # ============================================================
 
@@ -1741,7 +1908,7 @@ for plt_name in PLT_TRANSFER_LEARNING:
 
 # ============================================================
 # KEGIATAN 6: Iterasi 2 - Direct Training dengan Window Size 12 Bulan
-# Berlaku untuk: PLTS Atap, PLT Hybrid (tetap TANPA bobot Pre-Training)
+# Berlaku untuk: PLT_DIRECT_TRAINING -- [DATASET V2/V3] sekarang KOSONG
 # ============================================================
 
 for plt_name in PLT_DIRECT_TRAINING:
@@ -1814,6 +1981,12 @@ for plt_name in daftar_plt_final:
 
     y_pred_asli_iter2 = scaler_target.inverse_transform(y_pred_scaled_iter2)
     y_test_asli_iter2 = scaler_target.inverse_transform(y_test_iter2.reshape(-1, 1))
+
+    # [CF FIX] konversi CF -> GWh (lihat cf_test_ke_gwh() di tahap Baseline).
+    # Window Iterasi 2 = 12 bulan, tapi target test tetap 12 titik Jan-Des
+    # 2025 (window hanya mengubah panjang input, bukan periode target).
+    y_pred_asli_iter2 = cf_test_ke_gwh(y_pred_asli_iter2, plt_name)
+    y_test_asli_iter2 = cf_test_ke_gwh(y_test_asli_iter2, plt_name)
 
     hasil_prediksi_iter2_per_plt[plt_name] = {
         "y_test_asli": y_test_asli_iter2.flatten(),
@@ -1949,7 +2122,7 @@ for plt_name in daftar_plt_final:
 
 # ============================================================
 # KEGIATAN 3: Iterasi 3 - Transfer Learning dengan Dropout 0.30
-# Berlaku untuk: PLTA, PLTB, PLTM, PLTMH, PLTS
+# Berlaku untuk: seluruh kategori di PLT_TRANSFER_LEARNING (Hydro, Solar, Wind)
 # ============================================================
 
 hasil_iter3_per_plt = {}
@@ -1997,7 +2170,7 @@ for plt_name in PLT_TRANSFER_LEARNING:
 
 # ============================================================
 # KEGIATAN 4: Iterasi 3 - Direct Training dengan Dropout 0.30
-# Berlaku untuk: PLTS Atap, PLT Hybrid (tetap TANPA bobot Pre-Training)
+# Berlaku untuk: PLT_DIRECT_TRAINING -- [DATASET V2/V3] sekarang KOSONG
 # ============================================================
 
 for plt_name in PLT_DIRECT_TRAINING:
@@ -2073,6 +2246,10 @@ for plt_name in daftar_plt_final:
 
     y_pred_asli_iter3 = scaler_target.inverse_transform(y_pred_scaled_iter3)
     y_test_asli_iter3 = scaler_target.inverse_transform(y_test.reshape(-1, 1))
+
+    # [CF FIX] konversi CF -> GWh (lihat cf_test_ke_gwh() di tahap Baseline).
+    y_pred_asli_iter3 = cf_test_ke_gwh(y_pred_asli_iter3, plt_name)
+    y_test_asli_iter3 = cf_test_ke_gwh(y_test_asli_iter3, plt_name)
 
     hasil_prediksi_iter3_per_plt[plt_name] = {
         "y_test_asli": y_test_asli_iter3.flatten(),
@@ -2233,7 +2410,7 @@ tabel_iterasi3 = hasil_iterasi3[["Jenis_PLT", "RMSE", "MAE", "MAPE", "Metode"]].
     columns={"RMSE": "RMSE_Iterasi3", "MAE": "MAE_Iterasi3", "MAPE": "MAPE_Iterasi3"}
 )
 
-# Menggabungkan seluruh tabel berdasarkan Jenis_PLT (outer join agar PLTS Atap & PLT Hybrid tetap tampil
+# Menggabungkan seluruh tabel berdasarkan Jenis_PLT (outer join dipertahankan agar kategori tanpa hasil di suatu tahap tetap tampil
 # meskipun tidak memiliki hasil Baseline)
 df_perbandingan_lengkap = tabel_baseline.merge(tabel_finetuning, on="Jenis_PLT", how="outer") \
                                          .merge(tabel_iterasi1, on="Jenis_PLT", how="outer") \
@@ -2266,7 +2443,7 @@ df_perbandingan_lengkap = df_perbandingan_lengkap.sort_values(
 ).reset_index(drop=True)
 
 print("Tabel Perbandingan Lengkap: Baseline vs Fine-Tuning vs Iterasi 1 vs Iterasi 2 vs Iterasi 3")
-print("(PLTS Atap & PLT Hybrid tidak memiliki nilai Baseline karena tidak tersedia pada data nasional)")
+print("([DATASET V2/V3] Seluruh kategori Hydro/Solar/Wind tersedia di data nasional maupun regional.)")
 df_perbandingan_lengkap
 
 # ============================================================
@@ -2310,7 +2487,7 @@ tabel_iterasi3_pm = hasil_iterasi3[["Jenis_PLT", "RMSE", "MAE", "MAPE"]].rename(
     columns={"RMSE": "RMSE_Iterasi3", "MAE": "MAE_Iterasi3", "MAPE": "MAPE_Iterasi3"}
 )
 
-# Menggabungkan seluruh tabel berdasarkan Jenis_PLT (outer join agar PLTS Atap & PLT Hybrid tetap tampil)
+# Menggabungkan seluruh tabel berdasarkan Jenis_PLT (outer join dipertahankan agar kategori tanpa hasil di suatu tahap tetap tampil)
 perbandingan_model = tabel_baseline_pm.merge(tabel_finetuning_pm, on="Jenis_PLT", how="outer") \
                                        .merge(tabel_iterasi1_pm, on="Jenis_PLT", how="outer") \
                                        .merge(tabel_iterasi2_pm, on="Jenis_PLT", how="outer") \
@@ -2383,7 +2560,7 @@ ringkasan_model = pd.DataFrame({
 })
 
 # Catatan: rata-rata Baseline dihitung hanya dari PLT yang memiliki data nasional
-# (PLTS Atap & PLT Hybrid bernilai NaN pada kolom Baseline, otomatis diabaikan oleh .mean())
+# (kategori tanpa nilai pada suatu kolom otomatis diabaikan oleh .mean())
 
 ringkasan_model = ringkasan_model.sort_values(by="Average_RMSE", ascending=True).reset_index(drop=True)
 
@@ -2573,7 +2750,7 @@ daftar_konfigurasi_model = {
         "Callback": "EarlyStopping, ReduceLROnPlateau",
     },
     "FineTuning": {
-        "Metode": "Transfer Learning (PLTA,PLTB,PLTM,PLTMH,PLTS) / Direct Training (PLTS Atap, PLT Hybrid)",
+        "Metode": "Transfer Learning (Hydro, Solar, Wind)",
         "Window_Size": WINDOW_SIZE,
         "Learning_Rate": LR_FINETUNE,
         "Dropout": 0.2,
@@ -2583,7 +2760,7 @@ daftar_konfigurasi_model = {
         "Callback": "EarlyStopping, ReduceLROnPlateau",
     },
     "Iterasi1": {
-        "Metode": "Transfer Learning (PLTA,PLTB,PLTM,PLTMH,PLTS) / Direct Training (PLTS Atap, PLT Hybrid)",
+        "Metode": "Transfer Learning (Hydro, Solar, Wind)",
         "Window_Size": WINDOW_SIZE,
         "Learning_Rate": LR_ITER1,
         "Dropout": 0.2,
@@ -2593,7 +2770,7 @@ daftar_konfigurasi_model = {
         "Callback": "EarlyStopping, ReduceLROnPlateau",
     },
     "Iterasi2": {
-        "Metode": "Transfer Learning (PLTA,PLTB,PLTM,PLTMH,PLTS) / Direct Training (PLTS Atap, PLT Hybrid)",
+        "Metode": "Transfer Learning (Hydro, Solar, Wind)",
         "Window_Size": WINDOW_SIZE_ITER2,
         "Learning_Rate": LR_ITER2,
         "Dropout": 0.2,
@@ -2603,7 +2780,7 @@ daftar_konfigurasi_model = {
         "Callback": "EarlyStopping, ReduceLROnPlateau",
     },
     "Iterasi3": {
-        "Metode": "Transfer Learning (PLTA,PLTB,PLTM,PLTMH,PLTS) / Direct Training (PLTS Atap, PLT Hybrid)",
+        "Metode": "Transfer Learning (Hydro, Solar, Wind)",
         "Window_Size": WINDOW_SIZE_ITER3,
         "Learning_Rate": LR_ITER3,
         "Dropout": DROPOUT_ITER3,
@@ -2682,8 +2859,9 @@ display(model_terbaik_per_plt)
 #   - Kalau Model_Terbaik PLT itu "Baseline" -> selalu "Direct Training"
 #     (tahap Baseline memang tidak pernah memuat bobot Pre-Training).
 #   - Selain itu -> "Transfer Learning" HANYA jika PLT-nya ada di
-#     PLT_TRANSFER_LEARNING (punya data Pre-Training nasional); PLTS Atap
-#     dan PLT Hybrid selalu "Direct Training" apa pun tahap pemenangnya.
+#     PLT_TRANSFER_LEARNING (punya data Pre-Training nasional). [DATASET
+#     V2/V3] ketiga kategori ada di daftar itu, jadi cabang else praktis
+#     tidak terpakai (dipertahankan sebagai pengaman).
 METODE_FINAL_PER_PLT = {}
 for _, baris_terbaik in model_terbaik_per_plt.iterrows():
     plt_name = baris_terbaik["Jenis_PLT"]
@@ -2785,7 +2963,7 @@ for plt_name in METODE_FINAL_PER_PLT.keys():
 
 # ============================================================
 # KEGIATAN 4: Melatih Model Final - Transfer Learning
-# Berlaku untuk: PLTA, PLTB, PLTMH, PLTS
+# Berlaku untuk: kategori yang METODE_FINAL-nya "Transfer Learning"
 # (Memuat bobot Pre-Training, dilanjutkan dengan seluruh data regional 2023-2025)
 # ============================================================
 
@@ -2848,7 +3026,7 @@ for plt_name in PLT_FINAL_TRANSFER_LEARNING:
 
 # ============================================================
 # KEGIATAN 5: Melatih Model Final - Direct Training
-# Berlaku untuk: PLTM, PLTS Atap, PLT Hybrid
+# Berlaku untuk: kategori yang METODE_FINAL-nya "Direct Training"
 # (Baseline LSTM dari nol menggunakan seluruh data regional 2023-2025)
 # ============================================================
 
@@ -2900,7 +3078,7 @@ for plt_name in PLT_FINAL_DIRECT_TRAINING:
 # ============================================================
 
 for plt_name, info in model_final_per_plt.items():
-    # Nama file mengganti spasi dengan underscore agar konsisten (PLTS Atap -> PLTS_Atap)
+    # Nama file mengganti spasi dengan underscore agar konsisten
     nama_file_aman = plt_name.replace(" ", "_")
     path_model = os.path.join(FOLDER_MODEL_FINAL, f"model_final_{nama_file_aman}.keras")
 
@@ -3154,9 +3332,27 @@ print("\nForecasting untuk seluruh jenis PLT selesai dijalankan.")
 
 hasil_forecast_asli_per_plt = {}
 
+# [CF FIX] Hasil inverse_transform sekarang Capacity Factor (CF), bukan
+# Produksi mentah -- perlu dikonversi ke GWh sebelum dipakai sebagai
+# forecast_ebt/forecast_total (kolom yang dikonsumsi dashboard & gap
+# analysis, semuanya berekspektasi satuan GWh).
+IDX_KAPASITAS_REGIONAL = FEATURE_COLS_REGIONAL.index("Kapasitas")
+JAM_PER_BULAN_FORECAST = PERIODE_FORECAST.days_in_month.values * 24
+
 for plt_name in metadata_model.keys():
     pred_scaled_array = np.array(hasil_forecast_per_plt[plt_name]).reshape(-1, 1)
-    pred_asli = scaler_target_loaded[plt_name].inverse_transform(pred_scaled_array).flatten()
+    pred_cf = scaler_target_loaded[plt_name].inverse_transform(pred_scaled_array).flatten()
+
+    # CF dibatasi rentang fisis [0, 1] -- proporsi produksi terhadap potensi
+    # maksimum kapasitas tidak mungkin negatif atau melebihi 100%.
+    pred_cf = np.clip(pred_cf, a_min=0, a_max=1)
+
+    # [CF FIX] Kapasitas diasumsikan tetap di level LOCF yang sama dengan
+    # yang dipakai forecast_autoregressive() untuk fitur Kapasitas (rata-rata
+    # 12 bulan terakhir data historis) -- rencana penambahan kapasitas
+    # 2026-2028 belum tersedia datanya.
+    kapasitas_locf_plt = seed_data_per_plt[plt_name]["fitur_locf_asli"][IDX_KAPASITAS_REGIONAL]
+    pred_asli = cf_ke_produksi(pred_cf, kapasitas_locf_plt, PERIODE_FORECAST)
 
     # Produksi tidak boleh bernilai negatif secara fisis, sehingga dibatasi minimum 0
     pred_asli = np.clip(pred_asli, a_min=0, a_max=None)

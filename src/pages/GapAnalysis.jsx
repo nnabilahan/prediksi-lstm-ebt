@@ -53,7 +53,7 @@ function buildGrowthSeries(jenis, plt) {
 export default function GapAnalysis() {
   const [tahun, setTahun] = useState(2026);
   const [jenis, setJenis] = useState('total');
-  const [plt, setPlt] = useState('PLTA');
+  const [plt, setPlt] = useState('Hydro');
 
   const forecastVal = jenis === 'total'
     ? ANNUAL_FORECAST.find(r => r.year === tahun)?.total
@@ -269,7 +269,7 @@ export default function GapAnalysis() {
         />
       </Panel>
       <Note tone="warn">
-        MAPE (semakin kecil semakin baik). LSTM unggul di PLT skala menengah (PLTA, PLTM, PLTMH, PLT Hybrid), tapi <strong>ARIMA lebih akurat</strong> di PLTB (skala terbesar) dan <strong>naive persistence lebih akurat</strong> di PLTS &amp; PLTS Atap (skala terkecil) — klaim "LSTM lebih unggul" perlu dikualifikasi per jenis PLT, bukan digeneralisasi.
+        MAPE (semakin kecil semakin baik). Pada dataset hasil rekonstruksi ulang (2023–2025, uji = 2025), <strong>LSTM kalah di ketiga kategori</strong>: naive persistence paling akurat di Hydro &amp; Solar, sedangkan di Wind ARIMA dan naive praktis seri (13,6% vs 13,7%) dan keduanya jauh mengungguli LSTM (36,3%). Diukur dengan RMSE, naive persistence menang di ketiganya. Klaim "LSTM lebih unggul dari metode tradisional" <strong>tidak didukung</strong> oleh hasil ini — kandidat penjelasannya: data latih regional sangat pendek (24 titik bulanan per kategori) dan ada lompatan level produksi di 2025 yang tidak bisa diantisipasi model.
       </Note>
 
       <Footer />

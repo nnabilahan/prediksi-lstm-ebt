@@ -15,28 +15,28 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 BACKEND_DIR = BASE_DIR / "backend"
 
-PIPELINE_DIR = BASE_DIR / "audit" / "results" / "pipeline_run" / "EBT_LSTM_Streamlit"
+PIPELINE_DIR = BASE_DIR / "audit" / "results" / "pipeline_run_v3" / "EBT_LSTM_Streamlit"
 KONFIGURASI_MODEL_PATH = PIPELINE_DIR / "config" / "konfigurasi_model.json"
 MODELS_DIR = PIPELINE_DIR / "models"
 SCALERS_DIR = PIPELINE_DIR / "scalers"
 EVALUASI_FINAL_PATH = PIPELINE_DIR / "evaluation" / "evaluasi_final.csv"
 
-DATASET_AWAL_PATH = BASE_DIR / "audit" / "source" / "DATA_PHASE_3_REGIONAL_MODIFIED.csv"
+DATASET_AWAL_PATH = BASE_DIR / "audit" / "source" / "DATA_REGIONAL_DISAGREGASI_V3.csv"
 
 DATABASE_PATH = BACKEND_DIR / "siprebar.db"
 DATABASE_URL = f"sqlite:///{DATABASE_PATH}"
 
-# Whitelist 7 jenis PLT yang punya model terlatih. Menambah jenis di luar
-# daftar ini TIDAK cukup dengan mengedit konstanta -- butuh model & scaler
-# baru dari pipeline training.
+# Whitelist kategori pembangkit yang punya model terlatih. Menambah jenis di
+# luar daftar ini TIDAK cukup dengan mengedit konstanta -- butuh model &
+# scaler baru dari pipeline training.
+#
+# [DATASET V3] Scope penelitian disederhanakan dari 7 jenis PLT menjadi 3
+# kategori inti: Hydro (PLTA+PLTM), Solar (PLTS+PLTS Atap), Wind (PLTB).
+# PLTMH dan PLT Hybrid dikeluarkan dari scope.
 JENIS_PLT_VALID = [
-    "PLTA",
-    "PLTB",
-    "PLTM",
-    "PLTMH",
-    "PLTS",
-    "PLT Hybrid",
-    "PLTS Atap",
+    "Hydro",
+    "Solar",
+    "Wind",
 ]
 
 # Nilai `sumber` pada tabel data_historis -- membedakan data bawaan hasil
@@ -46,7 +46,7 @@ SUMBER_INPUT_PENGGUNA = "input_pengguna"
 
 
 def slug_plt(jenis_plt: str) -> str:
-    """Nama jenis PLT -> potongan nama file artefak ('PLT Hybrid' -> 'PLT_Hybrid')."""
+    """Nama kategori -> potongan nama file artefak (spasi jadi underscore)."""
     return jenis_plt.replace(" ", "_")
 
 
@@ -61,7 +61,7 @@ def load_konfigurasi_model() -> dict:
         raise FileNotFoundError(
             f"konfigurasi_model.json tidak ditemukan di {KONFIGURASI_MODEL_PATH}. "
             "Jalankan pipeline training lebih dulu (audit/run_pipeline*.py) atau "
-            "salin folder audit/results/pipeline_run/ dari hasil run sebelumnya."
+            "salin folder audit/results/pipeline_run_v3/ dari hasil run sebelumnya."
         )
     with open(KONFIGURASI_MODEL_PATH, "r", encoding="utf-8") as f:
         return json.load(f)

@@ -340,7 +340,7 @@ export default function DataEBT() {
           )}
           <div className="p-4" style={{ borderTop: `1px solid ${C.line}` }}>
             <Note tone="warn">
-              <strong>Dataset ini adalah hasil rekonstruksi/estimasi</strong>, bukan data asli yang terverifikasi Dinas ESDM. Kolom Cuaca berupa proxy pola tahun 2023 yang diulang tiap tahun.
+              <strong>Kolom Produksi adalah hasil disagregasi bulanan dari angka tahunan Dinas ESDM Sulsel</strong> — angka tahunan tersebut merupakan kalkulasi (Kapasitas × Capacity Factor asumsi × 8760 jam), bukan metering langsung. Kolom Cuaca adalah data riil NASA POWER.
             </Note>
           </div>
         </Panel>

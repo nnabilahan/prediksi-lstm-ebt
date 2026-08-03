@@ -65,10 +65,10 @@ export default function Dashboard({ go }) {
           tip={`Total seluruh jenis PLT pada tahun observasi terakhir (${lastActual?.year})`}
         />
         <Stat
-          label="Jumlah jenis PLT"
-          value="7"
-          unit="Jenis"
-          sub="PLTA, PLTB, PLTM, PLTMH, PLTS, PLTS Atap, PLT Hybrid"
+          label="Jumlah kategori EBT"
+          value="3"
+          unit="Kategori"
+          sub="Hydro (PLTA+PLTM), Solar (PLTS+Atap), Wind (PLTB)"
           icon={Layers}
         />
         <Stat
@@ -119,7 +119,7 @@ export default function Dashboard({ go }) {
           <div className="space-y-3">
             <AnnualChart data={TREND_ANNUAL} height={224} />
             <Note tone="warn">
-              <strong>Data historis 2023–2025 adalah hasil rekonstruksi/estimasi</strong>, bukan observasi langsung yang terverifikasi Dinas ESDM. Fitur Cuaca berupa proxy pola tahun 2023 yang diulang tiap tahun.
+              <strong>Kolom Produksi 2023–2025 adalah hasil disagregasi bulanan dari angka tahunan Dinas ESDM Sulsel</strong> — dan angka tahunan itu sendiri merupakan kalkulasi (Kapasitas × Capacity Factor asumsi × 8760 jam), bukan metering langsung. Kolom Cuaca adalah data riil NASA POWER.
             </Note>
           </div>
         </Panel>

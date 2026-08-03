@@ -27,12 +27,16 @@ sys.modules["google.colab.files"] = _fake_google_colab_files
 
 AUDIT_DIR = os.path.dirname(os.path.abspath(__file__))
 SOURCE_DIR = os.path.join(AUDIT_DIR, "source_fixed")
-RUN_DIR = os.path.join(AUDIT_DIR, "results", "pipeline_run_fixed")
+# Nama folder output bisa dioverride lewat env var RUN_DIR_NAME supaya hasil
+# run dataset lama (pipeline_run_fixed/) tidak tertimpa oleh run dataset baru.
+RUN_DIR = os.path.join(
+    AUDIT_DIR, "results", os.environ.get("RUN_DIR_NAME", "pipeline_run_v3")
+)
 SOURCE_SCRIPT = os.path.join(SOURCE_DIR, "bs_tf_lstm_fix_fixed.py")
 
 REQUIRED_INPUT_CSVS = [
-    "DATA_PHASE_3_REGIONAL_MODIFIED.csv",
-    "DATA_PHASE_2_NASIONAL_FINAL.csv",
+    "DATA_REGIONAL_DISAGREGASI_V3.csv",
+    "DATA_NASIONAL_DISAGREGASI_V2.csv",
 ]
 
 

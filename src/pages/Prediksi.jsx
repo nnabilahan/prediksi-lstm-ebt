@@ -71,7 +71,7 @@ export default function Prediksi() {
   const inferWindowSize = windowSizeMap[inferPlant] ?? null;
 
   // Ukuran ulang daftar baris input tiap kali PLT (atau window_size-nya)
-  // berubah -- window PLTA=6 vs PLT Hybrid=12, misalnya.
+  // berubah -- window Hydro=6 vs Wind=12, misalnya.
   useEffect(() => {
     if (!inferWindowSize) return;
     setPredictRows(Array.from({ length: inferWindowSize }, emptyPredictRow));

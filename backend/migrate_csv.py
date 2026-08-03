@@ -1,11 +1,14 @@
 """
 Migrasi satu kali: isi tabel `data_historis` dari dataset awal hasil pipeline.
 
-Sumber: audit/source/DATA_PHASE_3_REGIONAL_MODIFIED.csv (252 baris).
-PENTING: dataset ini adalah hasil REKONSTRUKSI/ESTIMASI (lihat
-audit/source/README.md), BUKAN observasi terverifikasi Dinas ESDM. Karena itu
-seluruh baris hasil migrasi ini diberi `sumber = "rekonstruksi"` -- status
-tersebut ikut tersimpan di database, bukan hanya jadi catatan di dokumentasi.
+Sumber: audit/source/DATA_REGIONAL_DISAGREGASI_V3.csv (108 baris = 3 kategori
+Hydro/Solar/Wind x 3 tahun x 12 bulan).
+PENTING: kolom Produksi adalah hasil DISAGREGASI BULANAN dari angka TAHUNAN
+Dinas ESDM Sulsel, dan angka tahunan itu sendiri merupakan kalkulasi
+(Kapasitas x Capacity Factor asumsi x 8760 jam), BUKAN metering langsung --
+lihat audit/source/README.md. Karena itu seluruh baris hasil migrasi ini
+diberi `sumber = "rekonstruksi"`; status tersebut ikut tersimpan di database,
+bukan hanya jadi catatan di dokumentasi.
 
 Skrip ini menolak jalan kalau tabel sudah terisi, supaya tidak menggandakan
 data kalau terlanjur dijalankan dua kali. Pakai --reset untuk sengaja

@@ -1,0 +1,59 @@
+{
+    "Solar": {
+        "jenis_plt": "Solar",
+        "metode": "Direct Training",
+        "window_size": 6,
+        "learning_rate": "default (Adam)",
+        "dropout": 0.2,
+        "batch_size": 8,
+        "epochs": 100,
+        "optimizer": "Adam",
+        "fitur_input": [
+            "Cuaca",
+            "Kapasitas",
+            "Produksi"
+        ],
+        "target_prediksi": "Produksi",
+        "nama_file_model": "model_final_Solar.keras",
+        "nama_file_scaler_fitur": "scaler_fitur_Solar.pkl",
+        "nama_file_scaler_target": "scaler_target_Solar.pkl"
+    },
+    "Wind": {
+        "jenis_plt": "Wind",
+        "metode": "Direct Training",
+        "window_size": 6,
+        "learning_rate": "default (Adam)",
+        "dropout": 0.2,
+        "batch_size": 8,
+        "epochs": 100,
+        "optimizer": "Adam",
+        "fitur_input": [
+            "Cuaca",
+            "Kapasitas",
+            "Produksi"
+        ],
+        "target_prediksi": "Produksi",
+        "nama_file_model": "model_final_Wind.keras",
+        "nama_file_scaler_fitur": "scaler_fitur_Wind.pkl",
+        "nama_file_scaler_target": "scaler_target_Wind.pkl"
+    },
+    "Hydro": {
+        "jenis_plt": "Hydro",
+        "metode": "Direct Training",
+        "window_size": 6,
+        "learning_rate": "default (Adam)",
+        "dropout": 0.2,
+        "batch_size": 8,
+        "epochs": 100,
+        "optimizer": "Adam",
+        "fitur_input": [
+            "Cuaca",
+            "Kapasitas",
+            "Produksi"
+        ],
+        "target_prediksi": "Produksi",
+        "nama_file_model": "model_final_Hydro.keras",
+        "nama_file_scaler_fitur": "scaler_fitur_Hydro.pkl",
+        "nama_file_scaler_target": "scaler_target_Hydro.pkl"
+    }
+}

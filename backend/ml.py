@@ -5,23 +5,30 @@ artefak .keras/.pkl yang sudah ada hasil pipeline training.
 
 Mekanisme scaling & bentuk input mengikuti PERSIS apa yang dipakai saat model
 dilatih (lihat "KEGIATAN 2" & "KEGIATAN 3" fungsi forecast_autoregressive di
-audit/source_fixed/bs_tf_lstm_fix_fixed.py, sekitar baris 2720-3120):
+audit/source_fixed/bs_tf_lstm_fix_fixed.py, sekitar baris 2720-3300):
 
   - scaler_fitur_{PLT}.pkl di-fit HANYA pada 2 kolom [Cuaca, Kapasitas].
-  - scaler_target_{PLT}.pkl di-fit HANYA pada 1 kolom [Produksi].
+  - scaler_target_{PLT}.pkl di-fit HANYA pada 1 kolom [CF] (Capacity Factor
+    -- lihat "[CF FIX]" di pipeline: target model BUKAN Produksi mentah GWh,
+    tapi Produksi/Kapasitas per jam, supaya skala nasional & regional
+    sebanding untuk transfer learning).
   - Input model = hstack([fitur_scaled, target_scaled]) -> (window_size, 3),
-    urutan kolom [Cuaca, Kapasitas, Produksi] -- SAMA dengan "fitur_input" di
+    urutan kolom [Cuaca, Kapasitas, CF] -- SAMA dengan "fitur_input" di
     konfigurasi_model.json.
-  - Prediksi mentah (skala 0-1) di-inverse_transform pakai scaler_target,
-    lalu di-clip minimum 0 (produksi tidak boleh negatif secara fisis) --
-    perilaku yang sama dipakai pipeline untuk forecast 2026-2028.
+  - Prediksi mentah (skala 0-1) di-inverse_transform pakai scaler_target
+    -> CF, di-clip ke [0, 1] (CF fisis tidak mungkin negatif atau >100%),
+    lalu dikonversi balik ke GWh pakai Kapasitas & panjang bulan prediksi
+    (lihat cf_ke_produksi() di bawah) -- perilaku yang sama dipakai pipeline
+    untuk forecast 2026-2028.
 
-Verifikasi bentuk input model (mis. PLTA: window=6, 3 fitur) ->
+Verifikasi bentuk input model (mis. Hydro: window=6, 3 fitur) ->
 model.input_shape == (None, 6, 3) sudah dicek manual sebelum modul ini ditulis.
 """
+import calendar
 import os
 import pickle
 import threading
+from datetime import date
 
 os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "3")  # redam log startup TF yang berisik
 
@@ -29,6 +36,27 @@ import numpy as np
 import pandas as pd
 
 import config
+
+
+def _jam_dalam_bulan(tanggal: date) -> int:
+    return calendar.monthrange(tanggal.year, tanggal.month)[1] * 24
+
+
+def _bulan_berikutnya(tanggal: date) -> date:
+    if tanggal.month == 12:
+        return date(tanggal.year + 1, 1, 1)
+    return date(tanggal.year, tanggal.month + 1, 1)
+
+
+def hitung_cf(produksi: float, kapasitas: float, tanggal: date) -> float:
+    """CF = Produksi(GWh) x 1000 / (Kapasitas(MW) x jam_dalam_bulan). Identik
+    dengan hitung_capacity_factor() di audit/source_fixed/bs_tf_lstm_fix_fixed.py."""
+    return (produksi * 1000) / (kapasitas * _jam_dalam_bulan(tanggal))
+
+
+def cf_ke_produksi(cf: float, kapasitas: float, tanggal: date) -> float:
+    """Inverse dari hitung_cf(): CF -> Produksi (GWh)."""
+    return cf * kapasitas * _jam_dalam_bulan(tanggal) / 1000
 
 # Lock per PLT: model.predict() Keras tidak dijamin aman dipanggil dari
 # beberapa thread bersamaan pada objek model yang sama, dan FastAPI
@@ -93,7 +121,7 @@ def load_artefacts() -> None:
             if not path.exists():
                 raise FileNotFoundError(
                     f"Artefak untuk {jenis_plt} tidak ditemukan: {path}. "
-                    "Salin folder audit/results/pipeline_run/EBT_LSTM_Streamlit/ "
+                    "Salin folder audit/results/pipeline_run_v3/EBT_LSTM_Streamlit/ "
                     "dari hasil run pipeline sebelumnya."
                 )
 
@@ -147,22 +175,38 @@ def cek_rentang(jenis_plt: str, baris: list[dict]) -> list[str]:
 def predict(jenis_plt: str, baris: list[dict]) -> float:
     """Jalankan satu langkah inferensi. `baris` adalah window_size baris
     terakhir (sudah diurutkan & dipangkas oleh caller), tiap baris dict
-    berisi key 'produksi', 'kapasitas', 'cuaca' (float, sudah divalidasi
-    lengkap oleh caller)."""
+    berisi key 'produksi', 'kapasitas', 'cuaca', 'tanggal' (tanggal:
+    datetime.date, dibutuhkan untuk konversi CF -- lihat modul docstring)."""
     model = _models[jenis_plt]
     scaler_fitur = _scaler_fitur[jenis_plt]
     scaler_target = _scaler_target[jenis_plt]
     window_size = _window_size[jenis_plt]
 
     fitur = np.array([[r["cuaca"], r["kapasitas"]] for r in baris], dtype=float)
-    produksi = np.array([[r["produksi"]] for r in baris], dtype=float)
+
+    # [CF FIX] Model dilatih pada Capacity Factor, bukan Produksi mentah --
+    # ubah tiap baris historis ke CF sebelum di-scale (lihat docstring modul).
+    cf_historis = np.array(
+        [[hitung_cf(r["produksi"], r["kapasitas"], r["tanggal"])] for r in baris],
+        dtype=float,
+    )
 
     fitur_scaled = scaler_fitur.transform(fitur)
-    target_scaled = scaler_target.transform(produksi)
+    target_scaled = scaler_target.transform(cf_historis)
     sequence = np.hstack([fitur_scaled, target_scaled]).reshape(1, window_size, 3)
 
     with _lock:
         pred_scaled = model.predict(sequence, verbose=0)[0, 0]
 
-    pred_asli = scaler_target.inverse_transform([[pred_scaled]])[0, 0]
+    cf_pred = scaler_target.inverse_transform([[pred_scaled]])[0, 0]
+    cf_pred = max(0.0, min(1.0, float(cf_pred)))  # CF fisis dalam [0, 1]
+
+    # [CF FIX] Konversi balik ke GWh: kapasitas diasumsikan tetap di nilai
+    # baris terakhir (LOCF, sama seperti asumsi forecast_autoregressive di
+    # pipeline), bulan prediksi = 1 bulan setelah baris terakhir yang dikirim.
+    tanggal_terakhir = baris[-1]["tanggal"]
+    kapasitas_pred = baris[-1]["kapasitas"]
+    tanggal_pred = _bulan_berikutnya(tanggal_terakhir)
+
+    pred_asli = cf_ke_produksi(cf_pred, kapasitas_pred, tanggal_pred)
     return max(0.0, float(pred_asli))  # produksi tidak boleh negatif (sama seperti pipeline)
