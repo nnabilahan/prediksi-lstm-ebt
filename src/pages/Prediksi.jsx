@@ -297,7 +297,7 @@ export default function Prediksi() {
               value={fmt(rmse, 1)}
               unit="%"
               icon={Percent}
-              tip="Mean Absolute Percentage Error (tahap Fine-Tuning) — semakin kecil, prediksi semakin mendekati nilai aktual."
+              tip="Mean Absolute Percentage Error, model produksi (pooled + ensemble), evaluasi pada data uji 2025 — semakin kecil, prediksi semakin mendekati nilai aktual."
             />
           </div>
           <Panel
@@ -342,7 +342,7 @@ export default function Prediksi() {
               Model LSTM memprediksi total produksi EBT sebesar <strong>{fmt(totalPred, 2)} GWh</strong> untuk periode {periodLabel}. Rata-rata tahunan {fmt(avgPred, 2)} GWh.
             </Note>
             <Note tone="info">
-              Jenis pembangkit yang dipilih: <strong>{plantLabel}</strong>. MAPE model {fmt(rmse, 1)}% menunjukkan tingkat kesalahan prediksi relatif terhadap nilai aktual (tahap Fine-Tuning).
+              Jenis pembangkit yang dipilih: <strong>{plantLabel}</strong>. MAPE model {fmt(rmse, 1)}% menunjukkan tingkat kesalahan prediksi relatif terhadap nilai aktual, diukur pada data uji 2025 dengan model produksi (pooled + ensemble) yang sama dipakai panel "Inferensi langsung" di bawah.
             </Note>
             <Note tone="warn">
               Nilai prediksi bersifat informatif dan dapat berubah jika data historis diperbarui atau model dilatih ulang dengan parameter berbeda.
