@@ -1,8 +1,8 @@
 """
 Migrasi satu kali: isi tabel `data_historis` dari dataset awal hasil pipeline.
 
-Sumber: audit/source/DATA_REGIONAL_DISAGREGASI_V3.csv (108 baris = 3 kategori
-Hydro/Solar/Wind x 3 tahun x 12 bulan).
+Sumber: audit/source/DATA_REGIONAL_5JENIS.csv (180 baris = 5 jenis PLT
+x 3 tahun x 12 bulan).
 PENTING: kolom Produksi adalah hasil DISAGREGASI BULANAN dari angka TAHUNAN
 Dinas ESDM Sulsel, dan angka tahunan itu sendiri merupakan kalkulasi
 (Kapasitas x Capacity Factor asumsi x 8760 jam), BUKAN metering langsung --

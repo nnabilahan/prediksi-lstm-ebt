@@ -30,13 +30,13 @@ SOURCE_DIR = os.path.join(AUDIT_DIR, "source_fixed")
 # Nama folder output bisa dioverride lewat env var RUN_DIR_NAME supaya hasil
 # run dataset lama (pipeline_run_fixed/) tidak tertimpa oleh run dataset baru.
 RUN_DIR = os.path.join(
-    AUDIT_DIR, "results", os.environ.get("RUN_DIR_NAME", "pipeline_run_v3")
+    AUDIT_DIR, "results", os.environ.get("RUN_DIR_NAME", "pipeline_run_v4")
 )
 SOURCE_SCRIPT = os.path.join(SOURCE_DIR, "bs_tf_lstm_fix_fixed.py")
 
 REQUIRED_INPUT_CSVS = [
-    "DATA_REGIONAL_DISAGREGASI_V3.csv",
-    "DATA_NASIONAL_DISAGREGASI_V2.csv",
+    "DATA_REGIONAL_5JENIS.csv",
+    "DATA_NASIONAL_4JENIS.csv",
 ]
 
 

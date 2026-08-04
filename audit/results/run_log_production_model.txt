@@ -1,0 +1,49 @@
+WARNING:tensorflow:5 out of the last 5 calls to <function TensorFlowTrainer.make_predict_function.<locals>.one_step_on_data_distributed at 0x0000022F6A3FAAC0> triggered tf.function retracing. Tracing is expensive and the excessive number of tracings could be due to (1) creating @tf.function repeatedly in a loop, (2) passing tensors with different shapes, (3) passing Python objects instead of tensors. For (1), please define your @tf.function outside of the loop. For (2), @tf.function has reduce_retracing=True option that can avoid unnecessary retracing. For (3), please refer to https://www.tensorflow.org/guide/function#controlling_retracing and https://www.tensorflow.org/api_docs/python/tf/function for  more details.
+WARNING:tensorflow:6 out of the last 6 calls to <function TensorFlowTrainer.make_predict_function.<locals>.one_step_on_data_distributed at 0x0000022F6A4E4F40> triggered tf.function retracing. Tracing is expensive and the excessive number of tracings could be due to (1) creating @tf.function repeatedly in a loop, (2) passing tensors with different shapes, (3) passing Python objects instead of tensors. For (1), please define your @tf.function outside of the loop. For (2), @tf.function has reduce_retracing=True option that can avoid unnecessary retracing. For (3), please refer to https://www.tensorflow.org/guide/function#controlling_retracing and https://www.tensorflow.org/api_docs/python/tf/function for  more details.
+Jenis PLT regional : ['PLTA', 'PLTB', 'PLTM', 'PLTS', 'PLTS Atap']
+
+4 kombinasi unik untuk 5 jenis PLT:
+  B_w3_lr1e-3      -> ['PLTA']
+  B_w6_lr1e-3      -> ['PLTB']
+  B_w3_lr1e-4      -> ['PLTM']
+  C_w3_lr1e-3      -> ['PLTS', 'PLTS Atap']
+
+========================================================================
+Melatih kombinasi B_w3_lr1e-3 untuk: ['PLTA']
+========================================================================
+  3 model disimpan untuk kombinasi B_w3_lr1e-3.
+  PLTA       -> RMSE=77.062  MAPE=10.99%
+
+========================================================================
+Melatih kombinasi B_w6_lr1e-3 untuk: ['PLTB']
+========================================================================
+  3 model disimpan untuk kombinasi B_w6_lr1e-3.
+  PLTB       -> RMSE=5.071  MAPE=7.49%
+
+========================================================================
+Melatih kombinasi B_w3_lr1e-4 untuk: ['PLTM']
+========================================================================
+  3 model disimpan untuk kombinasi B_w3_lr1e-4.
+  PLTM       -> RMSE=5.831  MAPE=8.90%
+
+========================================================================
+Melatih kombinasi C_w3_lr1e-3 untuk: ['PLTS', 'PLTS Atap']
+========================================================================
+  3 model disimpan untuk kombinasi C_w3_lr1e-3.
+  PLTS       -> RMSE=0.096  MAPE=7.90%
+  PLTS Atap  -> RMSE=0.114  MAPE=7.92%
+
+=== Ringkasan evaluasi model produksi (data uji 2025) ===
+Jenis_PLT    Metode_Terpilih  RMSE_Test_2025_Konfirmasi  MAE_Test_2025_Konfirmasi  MAPE_Test_2025_Konfirmasi
+     PLTA Pooled+Ensemble(B)                  77.061881                 44.970246                  10.990178
+     PLTB Pooled+Ensemble(B)                   5.070630                  3.995013                   7.493112
+     PLTM Pooled+Ensemble(B)                   5.831244                  3.049991                   8.904050
+     PLTS Pooled+Ensemble(C)                   0.095808                  0.067293                   7.895312
+PLTS Atap Pooled+Ensemble(C)                   0.113781                  0.081272                   7.920635
+
+Output ditulis ke: C:\prediksi-lstm-ebt-react-app\audit\results\production_model
+
+PERINGATAN PRODUKSI: model PLTA/PLTB/PLTM/PLTS/PLTS Atap semuanya butuh input Cuaca BULAN YANG DITEBAK (bukan cuma histori). Backend (ml.py) dan form Prediksi.jsx WAJIB meminta nilai ini sebagai perkiraan/prakiraan, bukan observasi -- observasi bulan depan belum ada.
+
+CATATAN: PLTS dan PLTS Atap kalah dari seasonal-naive x rasio kapasitas pada data uji 2025 (lihat framing_findings.md). Model tetap disimpan & dipakai backend apa adanya -- TIDAK ditukar berdasarkan skor test.
+EXIT=0

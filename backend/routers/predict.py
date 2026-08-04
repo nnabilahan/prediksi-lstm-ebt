@@ -71,15 +71,17 @@ def predict(payload: PredictRequest):
     titik_terurut = sorted(payload.data, key=lambda t: t.tanggal)
     jendela = titik_terurut[-window_size:]
     baris = [
-        {"produksi": t.produksi, "kapasitas": t.kapasitas, "cuaca": t.cuaca}
+        {"produksi": t.produksi, "kapasitas": t.kapasitas, "cuaca": t.cuaca, "tanggal": t.tanggal}
         for t in jendela
     ]
 
     # Lapis 4: rentang nilai -- peringatan saja, tidak menolak.
-    daftar_peringatan = ml.cek_rentang(jenis_plt, baris)
+    daftar_peringatan = ml.cek_rentang(jenis_plt, baris, payload.cuaca_target)
     peringatan = "; ".join(daftar_peringatan) if daftar_peringatan else None
 
-    prediksi = ml.predict(jenis_plt, baris)
+    prediksi = ml.predict(
+        jenis_plt, baris, payload.cuaca_target, payload.kapasitas_target
+    )
 
     return PredictResponse(
         jenis_plt=jenis_plt,

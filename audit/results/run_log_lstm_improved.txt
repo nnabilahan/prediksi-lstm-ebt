@@ -1,65 +1,115 @@
-WARNING:tensorflow:5 out of the last 5 calls to <function TensorFlowTrainer.make_predict_function.<locals>.one_step_on_data_distributed at 0x000001F04983A7A0> triggered tf.function retracing. Tracing is expensive and the excessive number of tracings could be due to (1) creating @tf.function repeatedly in a loop, (2) passing tensors with different shapes, (3) passing Python objects instead of tensors. For (1), please define your @tf.function outside of the loop. For (2), @tf.function has reduce_retracing=True option that can avoid unnecessary retracing. For (3), please refer to https://www.tensorflow.org/guide/function#controlling_retracing and https://www.tensorflow.org/api_docs/python/tf/function for  more details.
-WARNING:tensorflow:6 out of the last 6 calls to <function TensorFlowTrainer.make_predict_function.<locals>.one_step_on_data_distributed at 0x000001F04CB1AE80> triggered tf.function retracing. Tracing is expensive and the excessive number of tracings could be due to (1) creating @tf.function repeatedly in a loop, (2) passing tensors with different shapes, (3) passing Python objects instead of tensors. For (1), please define your @tf.function outside of the loop. For (2), @tf.function has reduce_retracing=True option that can avoid unnecessary retracing. For (3), please refer to https://www.tensorflow.org/guide/function#controlling_retracing and https://www.tensorflow.org/api_docs/python/tf/function for  more details.
+WARNING:tensorflow:5 out of the last 5 calls to <function TensorFlowTrainer.make_predict_function.<locals>.one_step_on_data_distributed at 0x000001DBA893EE80> triggered tf.function retracing. Tracing is expensive and the excessive number of tracings could be due to (1) creating @tf.function repeatedly in a loop, (2) passing tensors with different shapes, (3) passing Python objects instead of tensors. For (1), please define your @tf.function outside of the loop. For (2), @tf.function has reduce_retracing=True option that can avoid unnecessary retracing. For (3), please refer to https://www.tensorflow.org/guide/function#controlling_retracing and https://www.tensorflow.org/api_docs/python/tf/function for  more details.
+WARNING:tensorflow:6 out of the last 6 calls to <function TensorFlowTrainer.make_predict_function.<locals>.one_step_on_data_distributed at 0x000001DBA893EB60> triggered tf.function retracing. Tracing is expensive and the excessive number of tracings could be due to (1) creating @tf.function repeatedly in a loop, (2) passing tensors with different shapes, (3) passing Python objects instead of tensors. For (1), please define your @tf.function outside of the loop. For (2), @tf.function has reduce_retracing=True option that can avoid unnecessary retracing. For (3), please refer to https://www.tensorflow.org/guide/function#controlling_retracing and https://www.tensorflow.org/api_docs/python/tf/function for  more details.
+Jenis PLT regional : ['PLTA', 'PLTB', 'PLTM', 'PLTS', 'PLTS Atap']
+Jenis PLT nasional : ['PLTA', 'PLTB', 'PLTM', 'PLTS']
+
 === Benchmark non-model (data uji 2025, satuan GWh) ===
-Kategori                           Model       RMSE       MAE      MAPE
-   Hydro                      Naive_lag1  98.469133 64.967708 15.773870
-   Hydro             SeasonalNaive_lag12 111.492178 94.771992 25.621681
-   Hydro SeasonalNaive_x_rasio_kapasitas 106.870186 89.630996 26.139595
-   Solar                      Naive_lag1   0.286718  0.237292 12.277630
-   Solar             SeasonalNaive_lag12   0.290078  0.250742 12.575833
-   Solar SeasonalNaive_x_rasio_kapasitas   0.176126  0.134976  7.218584
-    Wind                      Naive_lag1  10.422975  7.328992 13.685895
-    Wind             SeasonalNaive_lag12   9.845536  7.831133 14.069065
-    Wind SeasonalNaive_x_rasio_kapasitas   9.049820  8.174625 14.601911
+ Kategori                           Model       RMSE       MAE      MAPE
+     PLTA                      Naive_lag1  90.975896 59.883383 15.798769
+     PLTA             SeasonalNaive_lag12 103.094950 87.678692 25.667334
+     PLTA SeasonalNaive_x_rasio_kapasitas  98.278425 82.425175 26.139607
+     PLTB                      Naive_lag1  10.422975  7.328992 13.685895
+     PLTB             SeasonalNaive_lag12   9.845536  7.831133 14.069065
+     PLTB SeasonalNaive_x_rasio_kapasitas   9.049820  8.174625 14.601911
+     PLTM                      Naive_lag1   7.496995  5.084342 15.489146
+     PLTM             SeasonalNaive_lag12   8.608355  7.229325 25.516613
+     PLTM SeasonalNaive_x_rasio_kapasitas   8.591805  7.205865 26.139609
+     PLTS                      Naive_lag1   0.136307  0.110817 12.645887
+     PLTS             SeasonalNaive_lag12   0.177341  0.164208 18.048341
+     PLTS SeasonalNaive_x_rasio_kapasitas   0.080095  0.061388  7.219384
+PLTS Atap                      Naive_lag1   0.150876  0.126475 11.969772
+PLTS Atap             SeasonalNaive_lag12   0.120076  0.101883  9.587246
+PLTS Atap SeasonalNaive_x_rasio_kapasitas   0.096023  0.073589  7.217513
 
-======================================================================
-VARIAN A (input eksogen bulan-t: TIDAK)
-======================================================================
-  window=3 lr=1e-03 -> RMSE walk-forward = 34.455 (4 lipatan)
-  window=3 lr=1e-04 -> RMSE walk-forward = 25.425 (4 lipatan)
-  window=6 lr=1e-03 -> RMSE walk-forward = 34.145 (4 lipatan)
-  window=6 lr=1e-04 -> RMSE walk-forward = 36.909 (4 lipatan)
+==========================================================================
+VARIAN A (exog: tidak ada | kanal cuaca digeser: False)
+==========================================================================
+  window=3 lr=1e-03      RMSE walk-forward -> PLTA=30.313  PLTB=10.411  PLTM=5.643  PLTS=0.208  PLTS Atap=0.243
+  window=3 lr=1e-04      RMSE walk-forward -> PLTA=42.596  PLTB=13.139  PLTM=5.170  PLTS=0.138  PLTS Atap=0.194
+  window=6 lr=1e-03      RMSE walk-forward -> PLTA=75.135  PLTB=13.407  PLTM=7.056  PLTS=0.224  PLTS Atap=0.272
+  window=6 lr=1e-04      RMSE walk-forward -> PLTA=70.198  PLTB=14.027  PLTM=6.517  PLTS=0.178  PLTS Atap=0.297
 
-  Konfigurasi terpilih (murni dari walk-forward, tanpa melihat 2025): window=3 lr=1e-04 dropout=0.2
+==========================================================================
+VARIAN B (exog: ['cuaca_t'] | kanal cuaca digeser: False)
+==========================================================================
+  window=3 lr=1e-03      RMSE walk-forward -> PLTA=7.555  PLTB=6.497  PLTM=5.107  PLTS=0.178  PLTS Atap=0.201
+  window=3 lr=1e-04      RMSE walk-forward -> PLTA=31.875  PLTB=11.901  PLTM=5.102  PLTS=0.105  PLTS Atap=0.106
+  window=6 lr=1e-03      RMSE walk-forward -> PLTA=63.469  PLTB=5.600  PLTM=6.077  PLTS=0.220  PLTS Atap=0.247
+  window=6 lr=1e-04      RMSE walk-forward -> PLTA=67.027  PLTB=11.474  PLTM=6.140  PLTS=0.021  PLTS Atap=0.078
 
-======================================================================
-VARIAN B (input eksogen bulan-t: YA)
-======================================================================
-  window=3 lr=1e-03 -> RMSE walk-forward = 33.181 (4 lipatan)
-  window=3 lr=1e-04 -> RMSE walk-forward = 24.634 (4 lipatan)
-  window=6 lr=1e-03 -> RMSE walk-forward = 30.882 (4 lipatan)
-  window=6 lr=1e-04 -> RMSE walk-forward = 34.526 (4 lipatan)
+==========================================================================
+VARIAN C (exog: tidak ada | kanal cuaca digeser: True)
+==========================================================================
+  window=3 lr=1e-03      RMSE walk-forward -> PLTA=29.936  PLTB=6.758  PLTM=6.179  PLTS=0.015  PLTS Atap=0.016
+  window=3 lr=1e-04      RMSE walk-forward -> PLTA=32.865  PLTB=9.033  PLTM=5.950  PLTS=0.114  PLTS Atap=0.058
+  window=6 lr=1e-03      RMSE walk-forward -> PLTA=68.692  PLTB=8.234  PLTM=6.395  PLTS=0.066  PLTS Atap=0.091
+  window=6 lr=1e-04      RMSE walk-forward -> PLTA=62.393  PLTB=10.810  PLTM=5.767  PLTS=0.055  PLTS Atap=0.137
 
-  Konfigurasi terpilih (murni dari walk-forward, tanpa melihat 2025): window=3 lr=1e-04 dropout=0.2
+==========================================================================
+VARIAN D (exog: ['bulan_sin', 'bulan_cos'] | kanal cuaca digeser: True)
+==========================================================================
+  window=3 lr=1e-03      RMSE walk-forward -> PLTA=17.208  PLTB=8.479  PLTM=5.322  PLTS=0.086  PLTS Atap=0.116
+  window=3 lr=1e-04      RMSE walk-forward -> PLTA=40.959  PLTB=7.375  PLTM=5.911  PLTS=0.064  PLTS Atap=0.020
+  window=6 lr=1e-03      RMSE walk-forward -> PLTA=63.378  PLTB=10.284  PLTM=5.920  PLTS=0.041  PLTS Atap=0.065
+  window=6 lr=1e-04      RMSE walk-forward -> PLTA=56.226  PLTB=8.683  PLTM=5.167  PLTS=0.068  PLTS Atap=0.138
 
-=== Hasil pada data uji 2025 (satuan GWh) ===
-Varian Kategori  Model      RMSE       MAE      MAPE
-     A    Hydro LSTM_A 76.853390 47.030919 11.892441
-     A    Solar LSTM_A  0.370783  0.315848 16.535012
-     A     Wind LSTM_A 11.131878  8.406390 15.468587
-     B    Hydro LSTM_B 81.213123 51.018721 12.445997
-     B    Solar LSTM_B  0.402879  0.332861 17.278926
-     B     Wind LSTM_B 10.519998  7.876319 14.332936
+==========================================================================
+VARIAN E (exog: ['cuaca_rel'] | kanal cuaca digeser: True)
+==========================================================================
+  window=3 lr=1e-03      RMSE walk-forward -> PLTA=30.126  PLTB=6.586  PLTM=5.911  PLTS=0.019  PLTS Atap=0.038
+  window=3 lr=1e-04      RMSE walk-forward -> PLTA=35.832  PLTB=9.041  PLTM=6.021  PLTS=0.083  PLTS Atap=0.050
+  window=6 lr=1e-03      RMSE walk-forward -> PLTA=71.222  PLTB=7.235  PLTM=6.610  PLTS=0.019  PLTS Atap=0.031
+  window=6 lr=1e-04      RMSE walk-forward -> PLTA=65.271  PLTB=11.470  PLTM=6.010  PLTS=0.045  PLTS Atap=0.121
 
-=== Peringkat per kategori (RMSE terkecil) ===
-Kategori                           Model       RMSE       MAE      MAPE
-   Hydro                          LSTM_A  76.853390 47.030919 11.892441
-   Hydro                          LSTM_B  81.213123 51.018721 12.445997
-   Hydro                      Naive_lag1  98.469133 64.967708 15.773870
-   Hydro SeasonalNaive_x_rasio_kapasitas 106.870186 89.630996 26.139595
-   Hydro             SeasonalNaive_lag12 111.492178 94.771992 25.621681
-   Solar SeasonalNaive_x_rasio_kapasitas   0.176126  0.134976  7.218584
-   Solar                      Naive_lag1   0.286718  0.237292 12.277630
-   Solar             SeasonalNaive_lag12   0.290078  0.250742 12.575833
-   Solar                          LSTM_A   0.370783  0.315848 16.535012
-   Solar                          LSTM_B   0.402879  0.332861 17.278926
-    Wind SeasonalNaive_x_rasio_kapasitas   9.049820  8.174625 14.601911
-    Wind             SeasonalNaive_lag12   9.845536  7.831133 14.069065
-    Wind                      Naive_lag1  10.422975  7.328992 13.685895
-    Wind                          LSTM_B  10.519998  7.876319 14.332936
-    Wind                          LSTM_A  11.131878  8.406390 15.468587
+==========================================================================
+VARIAN F (exog: ['cuaca_rel', 'bulan_sin', 'bulan_cos'] | kanal cuaca digeser: True)
+==========================================================================
+  window=3 lr=1e-03      RMSE walk-forward -> PLTA=24.253  PLTB=8.063  PLTM=5.342  PLTS=0.127  PLTS Atap=0.138
+  window=3 lr=1e-04      RMSE walk-forward -> PLTA=41.262  PLTB=7.117  PLTM=5.921  PLTS=0.071  PLTS Atap=0.058
+  window=6 lr=1e-03      RMSE walk-forward -> PLTA=59.920  PLTB=8.416  PLTM=5.635  PLTS=0.114  PLTS Atap=0.129
+  window=6 lr=1e-04      RMSE walk-forward -> PLTA=61.970  PLTB=7.358  PLTM=5.576  PLTS=0.038  PLTS Atap=0.076
+
+=== Model LSTM terbaik per jenis PLT (dipilih dari skor walk-forward, TANPA melihat 2025) ===
+ Kategori Varian  Window     LR  RMSE_WalkForward      RMSE       MAE      MAPE
+     PLTA      B       3 0.0010          7.555366 77.061881 44.970246 10.990178
+     PLTB      B       6 0.0010          5.600446  5.070630  3.995013  7.493112
+     PLTM      B       3 0.0001          5.101989  5.831244  3.049991  8.904050
+     PLTS      C       3 0.0010          0.014745  0.095808  0.067293  7.895312
+PLTS Atap      C       3 0.0010          0.016357  0.113781  0.081272  7.920635
+
+=== Peringkat akhir per jenis PLT (RMSE terkecil) ===
+ Kategori                           Model       RMSE       MAE      MAPE
+     PLTA                 LSTM_terbaik(B)  77.061881 44.970246 10.990178
+     PLTA                      Naive_lag1  90.975896 59.883383 15.798769
+     PLTA SeasonalNaive_x_rasio_kapasitas  98.278425 82.425175 26.139607
+     PLTA             SeasonalNaive_lag12 103.094950 87.678692 25.667334
+     PLTB                 LSTM_terbaik(B)   5.070630  3.995013  7.493112
+     PLTB SeasonalNaive_x_rasio_kapasitas   9.049820  8.174625 14.601911
+     PLTB             SeasonalNaive_lag12   9.845536  7.831133 14.069065
+     PLTB                      Naive_lag1  10.422975  7.328992 13.685895
+     PLTM                 LSTM_terbaik(B)   5.831244  3.049991  8.904050
+     PLTM                      Naive_lag1   7.496995  5.084342 15.489146
+     PLTM SeasonalNaive_x_rasio_kapasitas   8.591805  7.205865 26.139609
+     PLTM             SeasonalNaive_lag12   8.608355  7.229325 25.516613
+     PLTS SeasonalNaive_x_rasio_kapasitas   0.080095  0.061388  7.219384
+     PLTS                 LSTM_terbaik(C)   0.095808  0.067293  7.895312
+     PLTS                      Naive_lag1   0.136307  0.110817 12.645887
+     PLTS             SeasonalNaive_lag12   0.177341  0.164208 18.048341
+PLTS Atap SeasonalNaive_x_rasio_kapasitas   0.096023  0.073589  7.217513
+PLTS Atap                 LSTM_terbaik(C)   0.113781  0.081272  7.920635
+PLTS Atap             SeasonalNaive_lag12   0.120076  0.101883  9.587246
+PLTS Atap                      Naive_lag1   0.150876  0.126475 11.969772
+
+=== Pemenang per jenis PLT ===
+  PLTA        -> LSTM_terbaik(B)            (RMSE=77.0619)
+  PLTB        -> LSTM_terbaik(B)            (RMSE=5.0706)
+  PLTM        -> LSTM_terbaik(B)            (RMSE=5.8312)
+  PLTS        -> SeasonalNaive_x_rasio_kapasitas (RMSE=0.0801)
+  PLTS Atap   -> SeasonalNaive_x_rasio_kapasitas (RMSE=0.0960)
+
+  LSTM unggul di 3 dari 5 jenis PLT.
 
 Output ditulis ke: C:\prediksi-lstm-ebt-react-app\audit\results\experiment_improved
 
-PERINGATAN VARIAN B: varian ini melihat Cuaca di bulan target. Karena kolom Produksi pada dataset ini DIBANGUN dari Cuaca dan Kapasitas, sebagian besar keunggulan varian B adalah artefak konstruksi dataset -- bukan bukti kemampuan prediksi. Jangan laporkan angkanya sebagai akurasi peramalan tanpa pengungkapan ini.
+PERINGATAN VARIAN B, C, D: ketiganya melihat Cuaca di bulan target. Karena kolom Produksi pada dataset ini DIBANGUN dari Cuaca dan Kapasitas, sebagian keunggulannya adalah artefak konstruksi dataset. Untuk dipakai sungguhan, Cuaca bulan target harus berasal dari PRAKIRAAN atau normal klimatologis, bukan nilai aktual seperti di eksperimen ini. Varian A bebas dari catatan ini -- ia tidak memakai informasi apa pun tentang bulan target.
 EXIT=0

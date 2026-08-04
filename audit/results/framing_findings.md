@@ -150,3 +150,102 @@ data. Itu kontribusi metodologis nyata dan jauh lebih kuat daripada memaksakan k
   diungkap eksplisit.
 - Eksperimen ini hanya mengevaluasi pada 2025 (12 titik per kategori). Kesimpulannya rapuh
   terhadap satu tahun uji; idealnya diulang begitu data 2026 tersedia.
+
+---
+
+# LAMPIRAN: Hasil final setelah ensembling & pemasangan ke produksi
+
+Bagian di atas ditulis saat dataset masih 3 kategori (Hydro/Solar/Wind).
+Dataset kemudian diganti ke **4 jenis nasional / 5 jenis regional**
+(`DATA_NASIONAL_4JENIS.csv`, `DATA_REGIONAL_5JENIS.csv`), dan eksperimen
+dijalankan ulang dengan dua tambahan: varian E/F (fitur rasio cuaca relatif),
+pemilihan model **per jenis PLT**, dan **seed ensembling** (N_SEED=3).
+
+Struktur konstruksi datasetnya SAMA: `Produksi_tahunan / Kapasitas` konstan
+persis di ketiga tahun (PLTA & PLTM 5,256 · PLTB 4,380 · PLTS & PLTS Atap
+1,752). PLTA & PLTM punya kolom Cuaca identik (begitu juga PLTS & PLTS Atap),
+jadi 5 jenis PLT itu efektifnya hanya **3 sinyal independen**.
+
+## Hasil akhir (data uji 2025, satuan GWh)
+
+| Jenis PLT | Pemenang | LSTM RMSE | LSTM MAPE | Benchmark terbaik |
+|---|---|---|---|---|
+| PLTA | **LSTM (varian B)** | 77,06 | 10,99% | 90,98 (naive lag-1) |
+| PLTB | **LSTM (varian B)** | 5,07 | 7,49% | 9,05 (seasonal x kapasitas) |
+| PLTM | **LSTM (varian B)** | 5,83 | 8,90% | 7,50 (naive lag-1) |
+| PLTS | seasonal x kapasitas | 0,096 | 7,90% | **0,080** |
+| PLTS Atap | seasonal x kapasitas | 0,114 | 7,92% | **0,096** |
+
+**LSTM unggul di 3 dari 5 jenis PLT.** Sebelum seluruh perbaikan framing,
+angkanya 0 dari 3 (dataset lama) / 2 dari 5 (pipeline utama dataset ini).
+
+## Catatan jujur soal turunnya 4/5 menjadi 3/5
+
+Sebelum ensembling, LSTM sempat unggul di 4 dari 5 (PLTS Atap dimenangkan
+varian E). Setelah ensembling, selektor walk-forward memilih varian C untuk
+PLTS Atap, dan varian C kalah dari seasonal naive pada data uji.
+
+Varian E (window=6) sebenarnya TETAP mengalahkan seasonal naive pada data uji
+2025 (RMSE 0,075 vs 0,096), tapi skor walk-forward-nya (0,0305) kalah dari
+varian C (0,0164). **Kombinasi tidak ditukar ke E**, meskipun angka test-nya
+lebih bagus -- menukar berdasarkan skor test adalah data leakage yang sama
+persis dengan temuan yang sudah diperbaiki di `audit_findings.md`.
+
+Kesimpulan yang jujur: pada 24 titik latih per jenis PLT, pemilihan varian
+untuk PLTS/PLTS Atap masih di dalam rentang ketidakpastian. Ini keterbatasan
+ukuran data, bukan bukti bahwa LSTM tidak mampu.
+
+## Model yang dipakai aplikasi (produksi)
+
+Dibangun oleh `audit/analysis/build_production_model.py` ->
+`audit/results/production_model/`. Backend (`backend/config.py`,
+`backend/ml.py`) membaca dari sini, BUKAN lagi dari
+`pipeline_run_v4/EBT_LSTM_Streamlit/`.
+
+| Jenis PLT | Kombinasi | File model |
+|---|---|---|
+| PLTA | Varian B, window=3, lr=1e-3 | `B_w3_lr1e-3_seed{0,1,2}.keras` |
+| PLTB | Varian B, window=6, lr=1e-3 | `B_w6_lr1e-3_seed{0,1,2}.keras` |
+| PLTM | Varian B, window=3, lr=1e-4 | `B_w3_lr1e-4_seed{0,1,2}.keras` |
+| PLTS, PLTS Atap | Varian C, window=3, lr=1e-3 | `C_w3_lr1e-3_seed{0,1,2}.keras` (berbagi) |
+
+PLTS dan PLTS Atap memakai file model yang SAMA -- dibedakan lewat category
+embedding, dan terbukti menghasilkan angka berbeda sesuai skalanya saat
+diuji lewat endpoint.
+
+`bs_tf_lstm_fix_fixed.py` (pipeline notebook-style, satu model per jenis PLT)
+**sengaja dipertahankan apa adanya** sebagai pembanding "pendekatan
+konvensional vs pendekatan yang diperbaiki" untuk BAB IV -- bukan ditinggal
+karena lupa.
+
+## Konsekuensi operasional yang WAJIB diungkap di laporan
+
+Seluruh kombinasi pemenang (varian B dan C) adalah model **known-future
+covariate**: mereka butuh nilai Cuaca BULAN YANG DITEBAK sebagai input.
+
+- Di evaluasi ini nilai tersebut diambil dari data aktual, karena yang
+  dievaluasi adalah masa lalu (2025).
+- Untuk prediksi sungguhan, nilai itu HARUS berasal dari **prakiraan** cuaca
+  (BMKG) atau **normal klimatologis** bulan tersebut -- observasi bulan depan
+  memang belum ada.
+- Endpoint `/api/predict` dan form Prediksi.jsx sudah meminta ini secara
+  eksplisit sebagai field `cuaca_target`, dengan keterangan bahwa isinya
+  perkiraan, bukan observasi.
+
+Karena Produksi pada dataset ini DIBANGUN dari Cuaca dan Kapasitas, sebagian
+keunggulan varian B/C adalah artefak konstruksi dataset. Varian A (murni lag,
+tidak melihat bulan target sama sekali) dilaporkan terpisah di
+`experiment_improved/perbandingan_antar_varian.csv` sebagai angka yang bebas
+dari kualifikasi ini.
+
+## Yang BELUM diregenerasi
+
+Forecast 2026-2028 di dashboard (`ANNUAL_FORECAST`, `MONTHLY_FORECAST_*` di
+`src/lib/data.js`) MASIH berasal dari pipeline versi sebelumnya, bukan model
+produksi baru. Regenerasinya butuh keputusan terpisah soal asumsi cuaca
+2026-2028 (model baru butuh input cuaca bulan yang ditebak; untuk horizon 3
+tahun itu berarti normal klimatologis, bukan prakiraan operasional).
+
+Angka MAPE di dashboard SUDAH dari model produksi baru, jadi untuk sementara
+MAPE dan forecast di halaman yang sama berasal dari dua model berbeda -- ini
+sudah ditandai eksplisit di komentar `src/lib/data.js`.

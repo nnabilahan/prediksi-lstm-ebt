@@ -48,6 +48,7 @@ export default function Prediksi() {
   const [healthError, setHealthError] = useState(null);
   const [healthLoading, setHealthLoading] = useState(true);
   const [predictRows, setPredictRows] = useState([]);
+  const [cuacaTarget, setCuacaTarget] = useState('');
   const [autofillLoading, setAutofillLoading] = useState(false);
   const [predictLoading, setPredictLoading] = useState(false);
   const [predictError, setPredictError] = useState(null);
@@ -71,10 +72,11 @@ export default function Prediksi() {
   const inferWindowSize = windowSizeMap[inferPlant] ?? null;
 
   // Ukuran ulang daftar baris input tiap kali PLT (atau window_size-nya)
-  // berubah -- window Hydro=6 vs Wind=12, misalnya.
+  // berubah -- window PLTA=6 vs PLTS Atap=12, misalnya.
   useEffect(() => {
     if (!inferWindowSize) return;
     setPredictRows(Array.from({ length: inferWindowSize }, emptyPredictRow));
+    setCuacaTarget('');
     setPredictResult(null);
     setPredictError(null);
   }, [inferPlant, inferWindowSize]);
@@ -113,6 +115,13 @@ export default function Prediksi() {
   }
 
   async function handlePredictSubmit() {
+    if (cuacaTarget === '') {
+      setPredictError(
+        'Perkiraan cuaca bulan berikutnya wajib diisi -- model butuh nilai ini ' +
+        'sebagai input, bukan cuma histori (lihat keterangan di atas form).'
+      );
+      return;
+    }
     setPredictLoading(true);
     setPredictError(null);
     setPredictResult(null);
@@ -125,6 +134,7 @@ export default function Prediksi() {
           kapasitas: r.kapasitas === '' ? null : parseFloat(r.kapasitas),
           cuaca: r.cuaca === '' ? null : parseFloat(r.cuaca),
         })),
+        cuaca_target: parseFloat(cuacaTarget),
       };
       const result = await apiPost('/api/predict', payload);
       setPredictResult(result);
@@ -385,12 +395,28 @@ export default function Prediksi() {
               {autofillLoading ? 'Mengambil data…' : `Ambil ${inferWindowSize ?? '…'} bulan terakhir dari data historis`}
             </button>
 
+            <Field label={`Perkiraan ${cuacaInfer.label} bulan yang ditebak`}>
+              <input
+                type="number" step="0.001" value={cuacaTarget}
+                onChange={e => setCuacaTarget(e.target.value)}
+                placeholder={`mis. prakiraan BMKG (${cuacaInfer.satuan})`}
+                style={inputStyle()}
+              />
+            </Field>
+            <p className="text-xs -mt-2" style={{ color: C.muted }}>
+              Model butuh perkiraan {cuacaInfer.label.toLowerCase()} untuk bulan yang
+              ditebak (bukan bulan-bulan histori di tabel kanan) -- isi dengan{' '}
+              <strong>prakiraan cuaca</strong> (mis. BMKG) atau normal klimatologis
+              bulan itu, <strong>bukan</strong> nilai observasi (observasi bulan
+              depan memang belum ada).
+            </p>
+
             <button
               type="button"
               onClick={handlePredictSubmit}
-              disabled={!inferWindowSize || predictLoading}
+              disabled={!inferWindowSize || predictLoading || cuacaTarget === ''}
               className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium mt-auto"
-              style={{ background: C.green, color: '#fff', border: 'none', cursor: (!inferWindowSize || predictLoading) ? 'default' : 'pointer', opacity: (!inferWindowSize || predictLoading) ? 0.7 : 1, fontFamily: "'Inter', sans-serif" }}
+              style={{ background: C.green, color: '#fff', border: 'none', cursor: (!inferWindowSize || predictLoading || cuacaTarget === '') ? 'default' : 'pointer', opacity: (!inferWindowSize || predictLoading || cuacaTarget === '') ? 0.7 : 1, fontFamily: "'Inter', sans-serif" }}
             >
               {predictLoading ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} fill="#fff" />}
               {predictLoading ? 'Memproses inferensi…' : 'Prediksi produksi EBT'}

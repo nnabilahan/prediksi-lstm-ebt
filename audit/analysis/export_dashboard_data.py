@@ -3,10 +3,14 @@ Generator src/lib/data.js dari hasil audit (Tugas 1 & 2), menggantikan
 data dummy/placeholder yang tadinya ditulis tangan.
 
 Sumber data (semua dari folder audit/, bukan Downloads langsung):
-- audit/source/DATA_REGIONAL_DISAGREGASI_V3.csv   -> data aktual 2023-2025
-  (3 kategori: Hydro/Solar/Wind; lihat DOKUMENTASI_DATASET_REGIONAL)
-- audit/results/pipeline_run_v3/EBT_LSTM_Streamlit/forecast/*.csv -> forecast 2026-2028
-- audit/results/pipeline_run_v3/.../evaluation/evaluasi_final.csv -> metrik akurasi
+- audit/source/DATA_REGIONAL_5JENIS.csv   -> data aktual 2023-2025
+  (5 jenis PLT)
+- audit/results/production_model/forecast/*.csv -> forecast 2026-2028 (model
+  produksi baru: pooled + ensemble; Cuaca = normal klimatologis per bulan
+  kalender, Kapasitas = LOCF Des 2025 -- lihat build_forecast_production.py)
+- audit/results/production_model/evaluation/evaluasi_final.csv -> metrik akurasi
+  (model produksi: pooled + category embedding + ensembling, lihat
+  audit/analysis/build_production_model.py)
   (MAPE) dari MODEL YANG BENAR-BENAR DIPAKAI untuk forecast, per kategori
 - audit/analysis/config_target_rued.csv                          -> target RUED terkoreksi
 - audit/results/baseline_comparison.csv                          -> LSTM vs ARIMA vs Naive
@@ -27,17 +31,16 @@ AUDIT_DIR = os.path.join(REPO_ROOT, "audit")
 SOURCE_DIR = os.path.join(AUDIT_DIR, "source")
 RESULTS_DIR = os.path.join(AUDIT_DIR, "results")
 ANALYSIS_DIR = os.path.join(AUDIT_DIR, "analysis")
-RUN_DIR_NAME = os.environ.get("RUN_DIR_NAME", "pipeline_run_v3")
-FORECAST_DIR = os.path.join(RESULTS_DIR, RUN_DIR_NAME, "EBT_LSTM_Streamlit", "forecast")
+FORECAST_DIR = os.path.join(RESULTS_DIR, "production_model", "forecast")
 
 DATA_JS_PATH = os.path.join(REPO_ROOT, "src", "lib", "data.js")
 
-# [DATASET V3] Scope penelitian disederhanakan ke 3 kategori inti.
-PLANT_ORDER = ["Hydro", "Solar", "Wind"]
+# [DATASET 4/5 JENIS] 5 jenis PLT regional.
+PLANT_ORDER = ["PLTA", "PLTB", "PLTM", "PLTS", "PLTS Atap"]
 
 
 def load_actual():
-    df = pd.read_csv(os.path.join(SOURCE_DIR, "DATA_REGIONAL_DISAGREGASI_V3.csv"))
+    df = pd.read_csv(os.path.join(SOURCE_DIR, "DATA_REGIONAL_5JENIS.csv"))
     df["Tanggal"] = pd.to_datetime(df["Tanggal"])
     df = df.sort_values(["Jenis", "Tanggal"]).reset_index(drop=True)
     return df
@@ -196,14 +199,28 @@ def render_js(ctx):
     js = f"""// AUTO-GENERATED oleh audit/analysis/export_dashboard_data.py -- JANGAN EDIT MANUAL.
 // Dibuat ulang: {gen_time}
 // Sumber data (semua hasil AUDIT, lihat audit/results/ & audit/analysis/):
-//   - Data aktual 2023-2025 : audit/source/DATA_REGIONAL_DISAGREGASI_V3.csv
-//     (3 kategori Hydro/Solar/Wind. Produksi = hasil DISAGREGASI BULANAN dari
+//   - Data aktual 2023-2025 : audit/source/DATA_REGIONAL_5JENIS.csv
+//     (5 jenis PLT. Produksi = hasil DISAGREGASI BULANAN dari
 //     angka TAHUNAN bauran energi Dinas ESDM Sulsel; angka tahunan itu sendiri
 //     adalah kalkulasi Kapasitas x Capacity Factor asumsi x 8760 jam, BUKAN
 //     metering langsung. Cuaca = data riil NASA POWER.)
-//   - Forecast 2026-2028    : audit/results/pipeline_run_v3/.../forecast/*.csv
-//   - Metrik akurasi (MAPE) : evaluation/evaluasi_final.csv (metode terpilih
-//     per kategori, dikonfirmasi pada data uji 2025)
+//   - Forecast 2026-2028    : audit/results/pipeline_run_v4/.../forecast/*.csv
+//   - Metrik akurasi (MAPE) : audit/results/production_model/evaluation/evaluasi_final.csv
+//     (model produksi terbaru: pooled + category embedding + ensembling
+//     N_SEED=3, dipilih lewat walk-forward validation -- lihat
+//     audit/results/framing_findings.md dan build_production_model.py)
+//   [PENTING] Forecast 2026-2028 di bawah (ANNUAL_FORECAST,
+//   MONTHLY_FORECAST_*) memakai model produksi yang SAMA dengan MAPE di
+//   atas, tapi dengan DUA ASUMSI TAMBAHAN yang wajib diungkap: (1) Cuaca
+//   bulan yang ditebak = NORMAL KLIMATOLOGIS per bulan kalender (rata-rata
+//   2023-2025), BUKAN prakiraan cuaca operasional -- horizon 3 tahun di
+//   luar jangkauan prakiraan BMKG; (2) Kapasitas = LOCF Desember 2025,
+//   TIDAK memperhitungkan rencana penambahan kapasitas EBT yang mungkin ada
+//   di RUED/RUPTL. Forecast juga OTOREGRESIF (prediksi bulan t jadi input
+//   bulan t+1), jadi kesalahan bisa terakumulasi -- akurasinya TIDAK sama
+//   dengan MAPE evaluasi 1-langkah di atas. Detail lengkap:
+//   audit/analysis/build_forecast_production.py dan
+//   audit/results/framing_findings.md.
 //   - Target RUED           : audit/analysis/config_target_rued.csv (Perda No. 2
 //     Tahun 2022 -- mencakup SELURUH SEKTOR energi, bukan spesifik kelistrikan;
 //     lihat audit/results/tugas2_findings.md untuk keterbatasan cakupan ini)
@@ -212,20 +229,24 @@ def render_js(ctx):
 // Untuk memperbarui: jalankan ulang audit/analysis/export_dashboard_data.py
 // setelah audit/results/ berubah -- JANGAN edit angka di file ini langsung.
 
-// [DATASET V3] 3 kategori inti: Hydro (PLTA+PLTM), Solar (PLTS+PLTS Atap),
-// Wind (PLTB). PLTMH & PLT Hybrid di luar scope penelitian.
+// [DATASET 4/5 JENIS] 5 jenis PLT regional. PLTMH & PLT Hybrid tidak ada
+// di dataset ini.
 export const PLANT_META = {{
-  Hydro: {{ label: 'Hydro (PLTA + PLTM)',   color: '#2E6F95' }},
-  Solar: {{ label: 'Solar (PLTS + Atap)',   color: '#DE9A2E' }},
-  Wind:  {{ label: 'Wind (PLTB)',           color: '#2F9E7A' }},
+  PLTA:        {{ label: 'PLTA (Tenaga Air)',   color: '#2E6F95' }},
+  PLTB:        {{ label: 'PLTB (Tenaga Angin)', color: '#2F9E7A' }},
+  PLTM:        {{ label: 'PLTM (Mini Hidro)',   color: '#7C6FAE' }},
+  PLTS:        {{ label: 'PLTS (Tenaga Surya)', color: '#DE9A2E' }},
+  'PLTS Atap': {{ label: 'PLTS Atap (Rooftop)', color: '#B8801F' }},
 }};
 
 export const PLANT_KEYS = Object.keys(PLANT_META);
 
 export const CUACA_CONFIG = {{
-  Hydro: {{ label: 'Curah Hujan',      satuan: 'mm',     help: 'Curah hujan rata-rata bulanan (NASA POWER) di centroid kapasitas PLTA/PLTM Sulsel.' }},
-  Solar: {{ label: 'Radiasi Matahari', satuan: 'kWh/m²', help: 'Rata-rata radiasi matahari harian dalam sebulan (NASA POWER).' }},
-  Wind:  {{ label: 'Kecepatan Angin',  satuan: 'm/s',    help: 'Kecepatan angin rata-rata bulanan (NASA POWER) di centroid kapasitas PLTB Sulsel.' }},
+  PLTA:        {{ label: 'Curah Hujan',      satuan: 'mm',     help: 'Curah hujan rata-rata bulanan (NASA POWER) di area DAS pembangkit.' }},
+  PLTB:        {{ label: 'Kecepatan Angin',  satuan: 'm/s',    help: 'Kecepatan angin rata-rata bulanan (NASA POWER) di lokasi pembangkit.' }},
+  PLTM:        {{ label: 'Curah Hujan',      satuan: 'mm',     help: 'Curah hujan rata-rata bulanan (NASA POWER) di area DAS pembangkit.' }},
+  PLTS:        {{ label: 'Radiasi Matahari', satuan: 'kWh/m²', help: 'Rata-rata radiasi matahari harian dalam sebulan (NASA POWER).' }},
+  'PLTS Atap': {{ label: 'Radiasi Matahari', satuan: 'kWh/m²', help: 'Rata-rata radiasi matahari harian dalam sebulan (NASA POWER).' }},
 }};
 
 // Target RUED Provinsi Sulawesi Selatan (Perda No. 2 Tahun 2022).
@@ -237,7 +258,7 @@ export const CUACA_CONFIG = {{
 export const RUED_TARGET = {json.dumps(ctx["ru_target"], indent=2, ensure_ascii=False)};
 
 // Total produksi EBT sektor kelistrikan per tahun (GWh) -- 2023-2025 dari
-// DATA_REGIONAL_DISAGREGASI_V3.csv (disagregasi bulanan dari angka tahunan
+// DATA_REGIONAL_5JENIS.csv (disagregasi bulanan dari angka tahunan
 // Dinas ESDM Sulsel).
 export const ANNUAL_ACTUAL = {json.dumps(ctx["annual_actual"], indent=2)};
 
@@ -272,7 +293,7 @@ export const MONTHLY_FORECAST_PER_PLT = {json.dumps(ctx["monthly_forecast_per_pl
 export const BASELINE_COMPARISON = {json.dumps(ctx["baseline_comparison"], indent=2, ensure_ascii=False)};
 
 // Contoh baris data historis untuk halaman Data EBT -- diambil dari
-// audit/source/DATA_REGIONAL_DISAGREGASI_V3.csv.
+// audit/source/DATA_REGIONAL_5JENIS.csv.
 export const SAMPLE_MONTHLY_ROWS = {json.dumps(ctx["sample_monthly_rows"], indent=2, ensure_ascii=False)};
 """
     return js
@@ -298,8 +319,7 @@ def main():
     per_jenis_2026 = build_per_jenis_2026(monthly_forecast_per_plt, actual_2025_per_plt)
 
     model_mape = build_model_mape(
-        os.path.join(RESULTS_DIR, RUN_DIR_NAME, "EBT_LSTM_Streamlit",
-                     "evaluation", "evaluasi_final.csv")
+        os.path.join(RESULTS_DIR, "production_model", "evaluation", "evaluasi_final.csv")
     )
     ru_target = build_ru_target(os.path.join(ANALYSIS_DIR, "config_target_rued.csv"))
     baseline_comparison = build_baseline_comparison(os.path.join(RESULTS_DIR, "baseline_comparison.csv"))

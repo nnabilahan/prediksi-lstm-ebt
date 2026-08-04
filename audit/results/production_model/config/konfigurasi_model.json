@@ -1,0 +1,78 @@
+{
+  "PLTA": {
+    "combo_id": "B_w3_lr1e-3",
+    "varian": "B",
+    "window_size": 3,
+    "fitur_exog": [
+      "cuaca_t"
+    ],
+    "geser_cuaca": false,
+    "kategori_idx": 0,
+    "n_seed": 3,
+    "fitur_input": [
+      "Cuaca",
+      "CF"
+    ],
+    "target_prediksi": "Produksi"
+  },
+  "PLTB": {
+    "combo_id": "B_w6_lr1e-3",
+    "varian": "B",
+    "window_size": 6,
+    "fitur_exog": [
+      "cuaca_t"
+    ],
+    "geser_cuaca": false,
+    "kategori_idx": 1,
+    "n_seed": 3,
+    "fitur_input": [
+      "Cuaca",
+      "CF"
+    ],
+    "target_prediksi": "Produksi"
+  },
+  "PLTM": {
+    "combo_id": "B_w3_lr1e-4",
+    "varian": "B",
+    "window_size": 3,
+    "fitur_exog": [
+      "cuaca_t"
+    ],
+    "geser_cuaca": false,
+    "kategori_idx": 2,
+    "n_seed": 3,
+    "fitur_input": [
+      "Cuaca",
+      "CF"
+    ],
+    "target_prediksi": "Produksi"
+  },
+  "PLTS": {
+    "combo_id": "C_w3_lr1e-3",
+    "varian": "C",
+    "window_size": 3,
+    "fitur_exog": [],
+    "geser_cuaca": true,
+    "kategori_idx": 3,
+    "n_seed": 3,
+    "fitur_input": [
+      "Cuaca",
+      "CF"
+    ],
+    "target_prediksi": "Produksi"
+  },
+  "PLTS Atap": {
+    "combo_id": "C_w3_lr1e-3",
+    "varian": "C",
+    "window_size": 3,
+    "fitur_exog": [],
+    "geser_cuaca": true,
+    "kategori_idx": 4,
+    "n_seed": 3,
+    "fitur_input": [
+      "Cuaca",
+      "CF"
+    ],
+    "target_prediksi": "Produksi"
+  }
+}

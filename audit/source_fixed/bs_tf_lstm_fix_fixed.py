@@ -45,73 +45,26 @@ periode data uji varian lain, dan membuat Baseline sekarang divalidasi
 memakai `X_val`/`y_val` saat training (sebelumnya divalidasi memakai
 `X_test`/`y_test`, yang juga merupakan jalur leakage tersendiri).
 
-## CATATAN DATASET V2/V3 (rekonstruksi dataset)
+## CATATAN DATASET 4/5 JENIS
 
-Dataset lama (`DATA_PHASE_3_REGIONAL_MODIFIED.csv` dan
-`DATA_PHASE_2_NASIONAL_FINAL.csv`) diganti dengan dataset hasil rekonstruksi
-ulang. Perubahan yang menyentuh kode ditandai komentar "[DATASET V2/V3]":
+Dataset yang dipakai sekarang (perubahan ditandai "[DATASET 4/5 JENIS]"):
+  - regional : `DATA_REGIONAL_5JENIS.csv` (2023-2025, 5 jenis: PLTA, PLTB,
+    PLTM, PLTS, PLTS Atap)
+  - nasional : `DATA_NASIONAL_4JENIS.csv` (2013-2023, 4 jenis: PLTA, PLTB,
+    PLTM, PLTS)
 
-1. Path dataset:
-   - regional : `DATA_REGIONAL_DISAGREGASI_V3.csv` (2023-2025, 3 kategori)
-   - nasional : `DATA_NASIONAL_DISAGREGASI_V2.csv` (2013-2023, 3 kategori)
-2. Kategori PLT disederhanakan dari 7 jenis (PLTA, PLTM, PLTMH, PLTS,
-   PLTS Atap, PLTB, PLT Hybrid) menjadi 3 kategori inti:
-   Hydro (PLTA+PLTM), Solar (PLTS+PLTS Atap), Wind (PLTB).
-   PLTMH dan PLT Hybrid dikeluarkan dari scope penelitian.
-   Konsekuensinya `PLT_DIRECT_TRAINING` menjadi kosong -- ketiga kategori
-   punya padanan nasional, jadi semuanya lewat Transfer Learning.
-3. Split Pre-Training nasional digeser mengikuti cakupan baru:
-   train = 2013-2021, validasi = 2022-2023 (lihat
-   `TAHUN_AKHIR_TRAIN_NASIONAL` / `TAHUN_VALIDASI_NASIONAL`).
-   Split regional TIDAK berubah: train+val = 2023-2024, test = 2025 --
-   sekarang datanya riil (2025 sudah dikonfirmasi Dinas ESDM), bukan hasil
-   proyeksi seperti sebelumnya.
+Struktur tahapannya sama seperti pipeline versi lama: jenis PLT yang punya
+padanan nasional lewat jalur Transfer Learning, sedangkan PLTS Atap (tanpa
+padanan nasional) lewat Direct Training.
 
-Karena datasetnya berbeda, seluruh angka RMSE/MAE/MAPE TIDAK bisa
-dibandingkan langsung dengan hasil run sebelumnya di
-`audit/results/eval_summary*.csv` -- itu perbandingan antar-dataset, bukan
-antar-perbaikan kode.
+Split Pre-Training nasional mengikuti cakupan 2013-2023: train = 2013-2021,
+validasi = 2022-2023 (lihat `TAHUN_AKHIR_TRAIN_NASIONAL` /
+`TAHUN_VALIDASI_NASIONAL`). Split regional tidak berubah: train+val =
+2023-2024, test = 2025.
 
-## CATATAN CF FIX (target model: Capacity Factor, bukan Produksi mentah)
-
-Setelah retraining dengan dataset V2/V3, ditemukan Transfer Learning kalah
-dari Baseline (LSTM univariate tanpa bobot Pre-Training) di ketiga kategori,
-dan LSTM kalah dari naive persistence/ARIMA di ketiga kategori juga (lihat
-`audit/results/dataset_v3_findings.md`). Salah satu kandidat penyebab:
-Produksi nasional dan regional berbeda ordo besar (ribuan vs ratusan GWh),
-sehingga bobot Pre-Training yang dimuat ke model regional (Transfer
-Learning) berisiko *negative transfer* -- skala targetnya tidak sebanding.
-
-Perbaikan yang diuji: target model diganti dari `Produksi` (GWh mentah)
-menjadi `CF` (Capacity Factor = Produksi x 1000 / (Kapasitas x
-jam_dalam_bulan), lihat `hitung_capacity_factor()` di bawah). CF bernilai
-~0-1 baik di data nasional maupun regional, sehingga transfer bobot antar
-skala jadi lebih masuk akal secara fisis. Perubahan ini ditandai komentar
-"[CF FIX]" di kodenya, mencakup:
-
-1. Kolom `CF` ditambahkan ke df/df_nasional/df_regional setelah load.
-2. `FEATURE_COL`/`TARGET_COL` (Baseline), `TARGET_COL_NASIONAL`
-   (Pre-Training), `TARGET_COL_REGIONAL` (Fine-Tuning/Iterasi 1-3/Final)
-   semuanya diarahkan ke `"CF"` (sebelumnya `"Produksi"`). Fitur input
-   (Cuaca, Kapasitas) TIDAK berubah.
-3. Metrik test 2025 (RMSE/MAE/MAPE di eval_summary.csv, evaluasi_final.csv)
-   tetap dilaporkan dalam GWh -- dikonversi balik dari CF pakai
-   `cf_test_ke_gwh()` right after setiap `inverse_transform()` pada data uji,
-   supaya tetap sebanding dengan hasil sebelum CF FIX dan dengan baseline
-   ARIMA/naive di `baseline_compare.py`. RMSE validasi (dipakai untuk
-   pemilihan model terbaik per kategori) TETAP di skala CF -- tidak masalah
-   karena perbandingan hanya dilakukan dalam satu kategori sekaligus
-   (skala/Kapasitas relatif konstan sepanjang periode validasi 1 kategori).
-4. Forecast 2026-2028 dikonversi balik ke GWh pakai `cf_ke_produksi()`,
-   dengan Kapasitas diasumsikan tetap di level LOCF (sama seperti asumsi
-   fitur Cuaca/Kapasitas lain di `forecast_autoregressive()`).
-5. Backend (`backend/ml.py`) ikut diperbarui: input historis dikonversi ke
-   CF sebelum di-scale, prediksi CF dikonversi balik ke GWh pakai Kapasitas
-   & panjang bulan prediksi.
-
-Dijalankan di folder run terpisah (`pipeline_run_v3_cf/`, lihat
-`RUN_DIR_NAME` di `audit/run_pipeline_fixed.py`) supaya hasil sebelum/sesudah
-CF FIX tetap bisa dibandingkan berdampingan.
+Angka RMSE/MAE/MAPE dari run ini TIDAK bisa dibandingkan langsung dengan
+`audit/results/eval_summary_before_*.csv` -- itu perbandingan antar-dataset,
+bukan antar-perbaikan kode.
 
 LIBRARAY
 """
@@ -181,7 +134,7 @@ print("TensorFlow version:", tf.__version__)
 
 # Path dataset regional Sulawesi Selatan
 # Silakan sesuaikan path file dengan lokasi dataset pada Google Drive/Colab
-DATASET_PATH = "DATA_REGIONAL_DISAGREGASI_V3.csv"
+DATASET_PATH = "DATA_REGIONAL_5JENIS.csv"
 
 # Membaca dataset
 df = pd.read_csv(DATASET_PATH)
@@ -672,7 +625,7 @@ import pandas as pd
 
 # Path dataset nasional (2020-2024)
 # Sesuaikan path dan nama file dengan dataset nasional yang sebenarnya digunakan
-DATASET_NASIONAL_PATH = "DATA_NASIONAL_DISAGREGASI_V2.csv"
+DATASET_NASIONAL_PATH = "DATA_NASIONAL_4JENIS.csv"
 
 # Membaca dataset nasional
 df_nasional = pd.read_csv(DATASET_NASIONAL_PATH)
@@ -1011,7 +964,7 @@ df_evaluasi_pretrain
 
 # Path dataset regional Sulawesi Selatan (versi lengkap dengan fitur Cuaca & Kapasitas)
 # Sesuaikan dengan dataset regional final yang digunakan pada penelitian
-DATASET_REGIONAL_FT_PATH = "DATA_REGIONAL_DISAGREGASI_V3.csv"
+DATASET_REGIONAL_FT_PATH = "DATA_REGIONAL_5JENIS.csv"
 
 df_regional = pd.read_csv(DATASET_REGIONAL_FT_PATH)
 
@@ -1174,12 +1127,10 @@ for plt_name in daftar_plt_regional:
 from tensorflow.keras.optimizers import Adam  # import baru: dibutuhkan untuk mengatur learning rate kecil
 
 # Daftar PLT yang memiliki hasil Pre-Training pada data nasional.
-# [DATASET V2/V3] Skema kategori disederhanakan dari 7 jenis PLT menjadi 3
-# kategori inti (Hydro = PLTA+PLTM, Solar = PLTS+PLTS Atap, Wind = PLTB);
-# PLTMH dan PLT Hybrid dikeluarkan dari scope penelitian. Ketiga kategori
-# tersedia di dataset nasional MAUPUN regional, jadi semuanya lewat jalur
-# Transfer Learning dan PLT_DIRECT_TRAINING sekarang kosong.
-PLT_TRANSFER_LEARNING = ["Hydro", "Solar", "Wind"]
+# [DATASET 4/5 JENIS] Dataset nasional memuat 4 jenis (PLTA, PLTB, PLTM,
+# PLTS); dataset regional memuat 5 jenis (keempat di atas + PLTS Atap).
+# PLTMH dan PLT Hybrid tidak ada di kedua dataset.
+PLT_TRANSFER_LEARNING = ["PLTA", "PLTB", "PLTM", "PLTS"]
 
 # Jumlah fitur regional HARUS SAMA dengan jumlah fitur nasional agar bobot bisa dimuat
 N_FEATURES_REGIONAL = len(FEATURE_COLS_REGIONAL) + 1  # Cuaca, Kapasitas, Produksi historis
@@ -1232,10 +1183,10 @@ for plt_name in PLT_TRANSFER_LEARNING:
 # jadi loop ini tidak berjalan (dipertahankan agar struktur tahapan utuh)
 # ============================================================
 
-# [DATASET V2/V3] Kosong: seluruh kategori (Hydro/Solar/Wind) punya padanan
-# di dataset nasional, jadi tidak ada lagi kategori yang harus dilatih dari
-# nol tanpa bobot Pre-Training. Loop di bawah otomatis tidak berjalan.
-PLT_DIRECT_TRAINING = []
+# [DATASET 4/5 JENIS] PLTS Atap tidak punya padanan di dataset nasional,
+# jadi dilatih dari nol tanpa bobot Pre-Training -- sama seperti struktur
+# pipeline versi lama.
+PLT_DIRECT_TRAINING = ["PLTS Atap"]
 
 for plt_name in PLT_DIRECT_TRAINING:
     print(f"\n=== Direct Training (Tanpa Transfer Learning) untuk: {plt_name} ===")

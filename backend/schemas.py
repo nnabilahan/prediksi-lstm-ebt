@@ -1,7 +1,7 @@
 """Skema Pydantic untuk request/response endpoint data historis."""
 from datetime import date
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class DataHistorisBase(BaseModel):
@@ -57,8 +57,31 @@ class TitikDataPrediksi(BaseModel):
 
 
 class PredictRequest(BaseModel):
+    """Payload POST /api/predict.
+
+    `cuaca_target` WAJIB: perkiraan/prakiraan Cuaca untuk bulan yang ditebak
+    -- BUKAN observasi (observasi bulan itu memang belum ada). Model produksi
+    memakai arsitektur "known-future covariate": prediksi CF bulan target
+    bergantung pada nilai Cuaca bulan itu sendiri, jadi wajib diisi dengan
+    estimasi (mis. prakiraan BMKG atau normal klimatologis bulan tsb), bukan
+    dikosongkan atau ditebak asal. Lihat backend/ml.py untuk detail
+    metodologis.
+    """
     jenis_plt: str
     data: list[TitikDataPrediksi]
+    cuaca_target: float = Field(
+        description=(
+            "Perkiraan/prakiraan Cuaca untuk bulan yang ditebak (bukan "
+            "observasi -- observasi bulan itu belum ada)."
+        )
+    )
+    kapasitas_target: float | None = Field(
+        default=None,
+        description=(
+            "Kapasitas bulan yang ditebak. Opsional -- kalau tidak diisi, "
+            "memakai kapasitas baris histori terakhir (asumsi LOCF)."
+        ),
+    )
 
 
 class PredictResponse(BaseModel):

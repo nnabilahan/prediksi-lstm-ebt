@@ -263,7 +263,7 @@ export default function DataEBT() {
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <Stat label="Jumlah data" value={fmt(rows.length, 0)} sub="baris observasi" icon={Database} />
-        <Stat label="Jumlah jenis PLT" value="7" sub="kategori pembangkit" />
+        <Stat label="Jumlah jenis PLT" value={String(PLANT_KEYS.length)} sub="kategori pembangkit" />
         <Stat label="Rentang tahun" value={rentangTahun} sub={`${tahunList.length} baris observasi`} />
       </div>
 

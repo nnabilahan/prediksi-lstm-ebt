@@ -53,7 +53,7 @@ function buildGrowthSeries(jenis, plt) {
 export default function GapAnalysis() {
   const [tahun, setTahun] = useState(2026);
   const [jenis, setJenis] = useState('total');
-  const [plt, setPlt] = useState('Hydro');
+  const [plt, setPlt] = useState('PLTA');
 
   const forecastVal = jenis === 'total'
     ? ANNUAL_FORECAST.find(r => r.year === tahun)?.total
@@ -189,6 +189,9 @@ export default function GapAnalysis() {
               <p className="text-xs" style={{ color: '#8E9C91' }}>
                 Hasil prediksi ini digunakan sebagai informasi pendukung evaluasi implementasi RUED, bukan sebagai pengukuran langsung terhadap capaian target bauran energi RUED ({RUED_FROM.persen}% tahun {RUED_FROM.year}, {RUED_TO.persen}% tahun {RUED_TO.year}).
               </p>
+              <p className="text-xs" style={{ color: '#8E9C91' }}>
+                Forecast memakai asumsi Cuaca = normal klimatologis per bulan kalender (rata-rata 2023–2025) dan Kapasitas tetap di level Desember 2025 — lihat catatan di halaman Dashboard untuk detail keterbatasannya.
+              </p>
             </div>
           </Panel>
         </div>
@@ -269,7 +272,7 @@ export default function GapAnalysis() {
         />
       </Panel>
       <Note tone="warn">
-        MAPE (semakin kecil semakin baik). Pada dataset hasil rekonstruksi ulang (2023–2025, uji = 2025), <strong>LSTM kalah di ketiga kategori</strong>: naive persistence paling akurat di Hydro &amp; Solar, sedangkan di Wind ARIMA dan naive praktis seri (13,6% vs 13,7%) dan keduanya jauh mengungguli LSTM (36,3%). Diukur dengan RMSE, naive persistence menang di ketiganya. Klaim "LSTM lebih unggul dari metode tradisional" <strong>tidak didukung</strong> oleh hasil ini — kandidat penjelasannya: data latih regional sangat pendek (24 titik bulanan per kategori) dan ada lompatan level produksi di 2025 yang tidak bisa diantisipasi model.
+        MAPE (semakin kecil semakin baik). Pada model pipeline audit (satu model per jenis PLT, uji = 2025), <strong>LSTM menang di 2 dari 5 jenis PLT</strong> (PLTS &amp; PLTS Atap, skala kecil), tapi <strong>kalah dari naive persistence</strong> di PLTA &amp; PLTM dan <strong>kalah dari ARIMA</strong> di PLTB. Klaim "LSTM lebih unggul dari metode tradisional" perlu dikualifikasi per jenis PLT, bukan digeneralisasi. Tabel ini membandingkan model tahap Fine-Tuning dari pipeline audit (<code>bs_tf_lstm_fix_fixed.py</code>) — <strong>bukan</strong> model produksi (pooled + ensemble) yang dipakai halaman Prediksi EBT, yang unggul di 3 dari 5 jenis PLT (lihat <code>audit/results/framing_findings.md</code>).
       </Note>
 
       <Footer />

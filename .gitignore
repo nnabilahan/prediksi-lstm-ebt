@@ -31,6 +31,12 @@ audit/results/pipeline_run*/model_final/
 audit/results/pipeline_run*/EBT_LSTM_Streamlit/models/
 audit/results/pipeline_run*/EBT_LSTM_Streamlit/scalers/
 
+# Model produksi (dipakai backend/): binari .keras diregenerasi lewat
+# audit/analysis/build_production_model.py -- tidak dikomit (reproducible
+# dalam hitungan menit). config/scaler_params/evaluation/forecast (kecil,
+# metadata) TETAP dikomit -- lihat pola yang sama di atas.
+audit/results/production_model/models/
+
 # Cadangan model lama sebelum retrain (arsip lokal, jangan di-commit).
 _backup_model_lama/
 

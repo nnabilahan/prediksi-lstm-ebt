@@ -2,11 +2,18 @@
 Konfigurasi terpusat backend SIPREBAR: path artefak, whitelist jenis PLT, dan
 pembacaan konfigurasi model hasil pipeline.
 
-Prinsip: SATU SUMBER KEBENARAN. Nilai seperti `window_size` dan urutan fitur
-input TIDAK di-hardcode di sini -- semuanya dibaca langsung dari
-`konfigurasi_model.json` yang ditulis oleh pipeline training. Kalau pipeline
-dijalankan ulang dengan window_size berbeda, backend ikut menyesuaikan tanpa
-perlu diedit.
+[MODEL PRODUKSI] Artefak sekarang berasal dari
+audit/analysis/build_production_model.py (model pooled + category embedding
++ ensembling, dipilih lewat walk-forward validation), BUKAN lagi dari
+audit/results/pipeline_run_v4/EBT_LSTM_Streamlit/ (pipeline notebook-style
+lama, satu model per jenis PLT). Lihat audit/results/framing_findings.md dan
+docstring build_production_model.py untuk alasan & metodologi lengkap.
+
+Prinsip: SATU SUMBER KEBENARAN. Nilai seperti `window_size`, `fitur_exog`,
+dan `combo_id` per jenis PLT TIDAK di-hardcode di sini -- semuanya dibaca
+langsung dari `konfigurasi_model.json` yang ditulis
+build_production_model.py. Kalau skrip itu dijalankan ulang dengan kombinasi
+pemenang berbeda, backend ikut menyesuaikan tanpa perlu diedit.
 """
 import json
 from pathlib import Path
@@ -15,13 +22,13 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 BACKEND_DIR = BASE_DIR / "backend"
 
-PIPELINE_DIR = BASE_DIR / "audit" / "results" / "pipeline_run_v3" / "EBT_LSTM_Streamlit"
-KONFIGURASI_MODEL_PATH = PIPELINE_DIR / "config" / "konfigurasi_model.json"
-MODELS_DIR = PIPELINE_DIR / "models"
-SCALERS_DIR = PIPELINE_DIR / "scalers"
-EVALUASI_FINAL_PATH = PIPELINE_DIR / "evaluation" / "evaluasi_final.csv"
+PRODUCTION_DIR = BASE_DIR / "audit" / "results" / "production_model"
+KONFIGURASI_MODEL_PATH = PRODUCTION_DIR / "config" / "konfigurasi_model.json"
+MODELS_DIR = PRODUCTION_DIR / "models"
+SCALER_PARAMS_PATH = PRODUCTION_DIR / "scalers" / "scaler_params.json"
+EVALUASI_FINAL_PATH = PRODUCTION_DIR / "evaluation" / "evaluasi_final.csv"
 
-DATASET_AWAL_PATH = BASE_DIR / "audit" / "source" / "DATA_REGIONAL_DISAGREGASI_V3.csv"
+DATASET_AWAL_PATH = BASE_DIR / "audit" / "source" / "DATA_REGIONAL_5JENIS.csv"
 
 DATABASE_PATH = BACKEND_DIR / "siprebar.db"
 DATABASE_URL = f"sqlite:///{DATABASE_PATH}"
@@ -30,13 +37,14 @@ DATABASE_URL = f"sqlite:///{DATABASE_PATH}"
 # luar daftar ini TIDAK cukup dengan mengedit konstanta -- butuh model &
 # scaler baru dari pipeline training.
 #
-# [DATASET V3] Scope penelitian disederhanakan dari 7 jenis PLT menjadi 3
-# kategori inti: Hydro (PLTA+PLTM), Solar (PLTS+PLTS Atap), Wind (PLTB).
-# PLTMH dan PLT Hybrid dikeluarkan dari scope.
+# [DATASET 4/5 JENIS] Dataset regional memuat 5 jenis PLT. PLTMH dan
+# PLT Hybrid tidak ada di dataset ini.
 JENIS_PLT_VALID = [
-    "Hydro",
-    "Solar",
-    "Wind",
+    "PLTA",
+    "PLTB",
+    "PLTM",
+    "PLTS",
+    "PLTS Atap",
 ]
 
 # Nilai `sumber` pada tabel data_historis -- membedakan data bawaan hasil
@@ -45,41 +53,62 @@ SUMBER_REKONSTRUKSI = "rekonstruksi"
 SUMBER_INPUT_PENGGUNA = "input_pengguna"
 
 
-def slug_plt(jenis_plt: str) -> str:
-    """Nama kategori -> potongan nama file artefak (spasi jadi underscore)."""
-    return jenis_plt.replace(" ", "_")
-
-
 def load_konfigurasi_model() -> dict:
-    """Baca konfigurasi_model.json (window_size, fitur_input, nama file artefak).
+    """Baca konfigurasi_model.json (per jenis PLT: combo_id, window_size,
+    fitur_exog, geser_cuaca, kategori_idx, n_seed).
 
-    Raise FileNotFoundError kalau pipeline belum pernah dijalankan di mesin ini,
-    dengan pesan yang menunjuk ke akar masalahnya (bukan KeyError misterius
-    beberapa lapis kemudian).
+    Raise FileNotFoundError kalau build_production_model.py belum pernah
+    dijalankan di mesin ini, dengan pesan yang menunjuk ke akar masalahnya
+    (bukan KeyError misterius beberapa lapis kemudian).
     """
     if not KONFIGURASI_MODEL_PATH.exists():
         raise FileNotFoundError(
             f"konfigurasi_model.json tidak ditemukan di {KONFIGURASI_MODEL_PATH}. "
-            "Jalankan pipeline training lebih dulu (audit/run_pipeline*.py) atau "
-            "salin folder audit/results/pipeline_run_v3/ dari hasil run sebelumnya."
+            "Jalankan audit/analysis/build_production_model.py lebih dulu "
+            "(butuh audit/analysis/lstm_improved.py sudah pernah dijalankan "
+            "sampai selesai untuk tahu kombinasi pemenang)."
         )
     with open(KONFIGURASI_MODEL_PATH, "r", encoding="utf-8") as f:
         return json.load(f)
 
 
+def load_scaler_params() -> dict:
+    """Baca scaler_params.json (rentang min-max CF global & Cuaca per jenis PLT,
+    dipakai ml.py untuk normalisasi/denormalisasi manual -- bukan objek
+    MinMaxScaler pickle, karena hanya perlu 2 angka per rentang)."""
+    if not SCALER_PARAMS_PATH.exists():
+        raise FileNotFoundError(
+            f"scaler_params.json tidak ditemukan di {SCALER_PARAMS_PATH}. "
+            "Jalankan audit/analysis/build_production_model.py lebih dulu."
+        )
+    with open(SCALER_PARAMS_PATH, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
 def cek_artefak() -> dict:
-    """Status keberadaan artefak model & scaler per jenis PLT.
+    """Status keberadaan model per jenis PLT (dicek lewat combo_id di
+    konfigurasi_model.json, karena satu file model bisa dipakai bersama oleh
+    beberapa jenis PLT yang kombinasi pemenangnya sama).
 
     Dipakai oleh /api/health supaya masalah 'model belum ada di mesin ini'
     ketahuan sebelum request inferensi pertama, bukan saat pengguna sudah
     menekan tombol Prediksi.
     """
     hasil = {}
+    try:
+        konfigurasi = load_konfigurasi_model()
+    except FileNotFoundError:
+        return {plt: {"model": False, "config": False} for plt in JENIS_PLT_VALID}
+
     for plt in JENIS_PLT_VALID:
-        slug = slug_plt(plt)
-        hasil[plt] = {
-            "model": (MODELS_DIR / f"model_final_{slug}.keras").exists(),
-            "scaler_fitur": (SCALERS_DIR / f"scaler_fitur_{slug}.pkl").exists(),
-            "scaler_target": (SCALERS_DIR / f"scaler_target_{slug}.pkl").exists(),
-        }
+        cfg = konfigurasi.get(plt)
+        if cfg is None:
+            hasil[plt] = {"model": False, "config": False}
+            continue
+        n_seed = cfg["n_seed"]
+        model_ada = all(
+            (MODELS_DIR / f"{cfg['combo_id']}_seed{k}.keras").exists()
+            for k in range(n_seed)
+        )
+        hasil[plt] = {"model": model_ada, "config": True}
     return hasil

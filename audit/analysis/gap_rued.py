@@ -34,7 +34,7 @@ import matplotlib.pyplot as plt
 AUDIT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TARGET_RUED_PATH = os.path.join(AUDIT_DIR, "analysis", "config_target_rued.csv")
 FORECAST_TOTAL_PATH = os.path.join(
-    AUDIT_DIR, "results", "pipeline_run_v3", "EBT_LSTM_Streamlit", "forecast",
+    AUDIT_DIR, "results", "pipeline_run_v4", "EBT_LSTM_Streamlit", "forecast",
     "forecast_total_2026_2028.csv",
 )
 OUT_CSV = os.path.join(AUDIT_DIR, "results", "gap_analysis_2026_2028.csv")

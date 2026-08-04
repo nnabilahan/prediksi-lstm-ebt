@@ -4,8 +4,7 @@ klaim "LSTM lebih unggul dari metode tradisional" (Bab I skripsi).
 
 Metodologi split & metrik dibuat SAMA PERSIS dengan tahap Fine-Tuning LSTM
 di bs_tf_lstm_fix.py (baris 843-883, 1040-1055): dataset regional
-(DATA_REGIONAL_DISAGREGASI_V3.csv), per kategori (Hydro/Solar/Wind),
-target = Produksi,
+(DATA_REGIONAL_5JENIS.csv), per jenis PLT, target = Produksi,
 train = 2023-2024, test = 2025 (tidak disentuh sampai evaluasi akhir),
 metrik RMSE/MAE/MAPE dihitung dengan formula identik ke
 `hitung_mape()` pada source pipeline (mask y_true != 0).
@@ -27,7 +26,7 @@ from statsmodels.tsa.arima.model import ARIMA
 warnings.filterwarnings("ignore")
 
 AUDIT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATA_PATH = os.path.join(AUDIT_DIR, "source", "DATA_REGIONAL_DISAGREGASI_V3.csv")
+DATA_PATH = os.path.join(AUDIT_DIR, "source", "DATA_REGIONAL_5JENIS.csv")
 EVAL_SUMMARY_PATH = os.path.join(AUDIT_DIR, "results", "eval_summary.csv")
 OUT_PATH = os.path.join(AUDIT_DIR, "results", "baseline_comparison.csv")
 

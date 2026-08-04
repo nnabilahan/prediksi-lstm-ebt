@@ -65,10 +65,10 @@ export default function Dashboard({ go }) {
           tip={`Total seluruh jenis PLT pada tahun observasi terakhir (${lastActual?.year})`}
         />
         <Stat
-          label="Jumlah kategori EBT"
-          value="3"
-          unit="Kategori"
-          sub="Hydro (PLTA+PLTM), Solar (PLTS+Atap), Wind (PLTB)"
+          label="Jumlah jenis PLT"
+          value="5"
+          unit="Jenis"
+          sub="PLTA, PLTB, PLTM, PLTS, PLTS Atap"
           icon={Layers}
         />
         <Stat
@@ -199,6 +199,9 @@ export default function Dashboard({ go }) {
             </Note>
             <Note tone="info">
               Nilai forecast berasal dari model LSTM yang <strong>sudah dilatih sebelumnya</strong>. Membuka halaman ini tidak menjalankan pelatihan atau inferensi baru.
+            </Note>
+            <Note tone="warn">
+              Forecast 2026–2028 memakai asumsi <strong>Cuaca = normal klimatologis</strong> per bulan kalender (rata-rata 2023–2025), bukan prakiraan cuaca operasional — horizon 3 tahun di luar jangkauan prakiraan BMKG. <strong>Kapasitas diasumsikan tetap</strong> di level Desember 2025, tidak memperhitungkan rencana penambahan kapasitas EBT yang mungkin ada di RUED/RUPTL. Forecast juga bersifat otoregresif (prediksi satu bulan menjadi input bulan berikutnya), sehingga kesalahan dapat terakumulasi sepanjang periode.
             </Note>
           </div>
         </Panel>

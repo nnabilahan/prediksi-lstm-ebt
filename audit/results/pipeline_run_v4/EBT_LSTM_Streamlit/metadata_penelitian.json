@@ -1,0 +1,119 @@
+{
+    "judul_penelitian": "Prediksi Produksi Energi Baru Terbarukan (EBT) Sektor Kelistrikan Provinsi Sulawesi Selatan Menggunakan LSTM dengan Transfer Learning",
+    "metodologi": "CRISP-DM",
+    "jenis_plt": [
+        "PLTS",
+        "PLTS Atap",
+        "PLTB",
+        "PLTM",
+        "PLTA"
+    ],
+    "periode_data_historis": "2023-2025 (Regional), 2020-2024 (Nasional untuk Pre-Training)",
+    "periode_forecasting": "Januari 2026 - Desember 2028",
+    "konfigurasi_final_per_plt": {
+        "PLTS": {
+            "jenis_plt": "PLTS",
+            "metode": "Transfer Learning",
+            "window_size": 6,
+            "learning_rate": 5e-05,
+            "dropout": 0.3,
+            "batch_size": 8,
+            "epochs": 100,
+            "optimizer": "Adam",
+            "fitur_input": [
+                "Cuaca",
+                "Kapasitas",
+                "CF"
+            ],
+            "target_prediksi": "CF",
+            "nama_file_model": "model_final_PLTS.keras",
+            "nama_file_scaler_fitur": "scaler_fitur_PLTS.pkl",
+            "nama_file_scaler_target": "scaler_target_PLTS.pkl"
+        },
+        "PLTS Atap": {
+            "jenis_plt": "PLTS Atap",
+            "metode": "Direct Training",
+            "window_size": 12,
+            "learning_rate": 5e-05,
+            "dropout": 0.2,
+            "batch_size": 8,
+            "epochs": 100,
+            "optimizer": "Adam",
+            "fitur_input": [
+                "Cuaca",
+                "Kapasitas",
+                "CF"
+            ],
+            "target_prediksi": "CF",
+            "nama_file_model": "model_final_PLTS_Atap.keras",
+            "nama_file_scaler_fitur": "scaler_fitur_PLTS_Atap.pkl",
+            "nama_file_scaler_target": "scaler_target_PLTS_Atap.pkl"
+        },
+        "PLTB": {
+            "jenis_plt": "PLTB",
+            "metode": "Direct Training",
+            "window_size": 6,
+            "learning_rate": "default (Adam)",
+            "dropout": 0.2,
+            "batch_size": 8,
+            "epochs": 100,
+            "optimizer": "Adam",
+            "fitur_input": [
+                "Cuaca",
+                "Kapasitas",
+                "CF"
+            ],
+            "target_prediksi": "CF",
+            "nama_file_model": "model_final_PLTB.keras",
+            "nama_file_scaler_fitur": "scaler_fitur_PLTB.pkl",
+            "nama_file_scaler_target": "scaler_target_PLTB.pkl"
+        },
+        "PLTM": {
+            "jenis_plt": "PLTM",
+            "metode": "Direct Training",
+            "window_size": 6,
+            "learning_rate": "default (Adam)",
+            "dropout": 0.2,
+            "batch_size": 8,
+            "epochs": 100,
+            "optimizer": "Adam",
+            "fitur_input": [
+                "Cuaca",
+                "Kapasitas",
+                "CF"
+            ],
+            "target_prediksi": "CF",
+            "nama_file_model": "model_final_PLTM.keras",
+            "nama_file_scaler_fitur": "scaler_fitur_PLTM.pkl",
+            "nama_file_scaler_target": "scaler_target_PLTM.pkl"
+        },
+        "PLTA": {
+            "jenis_plt": "PLTA",
+            "metode": "Direct Training",
+            "window_size": 6,
+            "learning_rate": "default (Adam)",
+            "dropout": 0.2,
+            "batch_size": 8,
+            "epochs": 100,
+            "optimizer": "Adam",
+            "fitur_input": [
+                "Cuaca",
+                "Kapasitas",
+                "CF"
+            ],
+            "target_prediksi": "CF",
+            "nama_file_model": "model_final_PLTA.keras",
+            "nama_file_scaler_fitur": "scaler_fitur_PLTA.pkl",
+            "nama_file_scaler_target": "scaler_target_PLTA.pkl"
+        }
+    },
+    "metode_per_plt": {
+        "PLTS": "Transfer Learning",
+        "PLTS Atap": "Direct Training",
+        "PLTB": "Direct Training",
+        "PLTM": "Direct Training",
+        "PLTA": "Direct Training"
+    },
+    "tanggal_dibuat": "2026-08-04 10:38:40",
+    "catatan": "Forecasting menggunakan pendekatan autoregressive dengan asumsi fitur Cuaca dan Kapasitas mengikuti Last Observation Carried Forward (LOCF). Konfigurasi model final (window size, learning rate, dropout, batch size, epochs, metode) ditentukan PER JENIS PLT berdasarkan RMSE validasi masing-masing (lihat konfigurasi_final_per_plt), bukan satu konfigurasi tunggal untuk seluruh PLT."
+}
