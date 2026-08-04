@@ -1,5 +1,20 @@
 # Temuan Retraining dengan Dataset V2/V3 (rekonstruksi ulang)
 
+> ## ⚠️ DOKUMEN INI SUDAH TIDAK BERLAKU — disimpan sebagai jejak audit
+>
+> Dataset yang dibahas di sini (**3 kategori**: Hydro = PLTA+PLTM,
+> Solar = PLTS+PLTS Atap, Wind = PLTB) **dikoreksi** setelah dokumen ini
+> ditulis. Dataset yang dipakai sekarang adalah **4 jenis nasional / 5 jenis
+> regional** (`DATA_NASIONAL_4JENIS.csv`, `DATA_REGIONAL_5JENIS.csv`).
+>
+> Seluruh angka di bawah **tidak mencerminkan hasil penelitian saat ini** dan
+> tidak boleh dikutip untuk laporan. Untuk hasil terkini lihat
+> **[`framing_findings.md`](framing_findings.md)**.
+>
+> Yang masih berlaku dari dokumen ini: diagnosis struktural bahwa kolom
+> Produksi adalah fungsi deterministik dari Kapasitas dan Cuaca — pola itu
+> sama persis di kedua dataset.
+
 Run: `audit/run_pipeline_fixed.py` → `audit/results/pipeline_run_v3/`
 Log lengkap: [`run_log_dataset_v3.txt`](run_log_dataset_v3.txt)
 Status: pipeline berjalan sampai akhir tanpa exception.
