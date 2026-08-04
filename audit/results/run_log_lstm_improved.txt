@@ -1,0 +1,65 @@
+WARNING:tensorflow:5 out of the last 5 calls to <function TensorFlowTrainer.make_predict_function.<locals>.one_step_on_data_distributed at 0x000001F04983A7A0> triggered tf.function retracing. Tracing is expensive and the excessive number of tracings could be due to (1) creating @tf.function repeatedly in a loop, (2) passing tensors with different shapes, (3) passing Python objects instead of tensors. For (1), please define your @tf.function outside of the loop. For (2), @tf.function has reduce_retracing=True option that can avoid unnecessary retracing. For (3), please refer to https://www.tensorflow.org/guide/function#controlling_retracing and https://www.tensorflow.org/api_docs/python/tf/function for  more details.
+WARNING:tensorflow:6 out of the last 6 calls to <function TensorFlowTrainer.make_predict_function.<locals>.one_step_on_data_distributed at 0x000001F04CB1AE80> triggered tf.function retracing. Tracing is expensive and the excessive number of tracings could be due to (1) creating @tf.function repeatedly in a loop, (2) passing tensors with different shapes, (3) passing Python objects instead of tensors. For (1), please define your @tf.function outside of the loop. For (2), @tf.function has reduce_retracing=True option that can avoid unnecessary retracing. For (3), please refer to https://www.tensorflow.org/guide/function#controlling_retracing and https://www.tensorflow.org/api_docs/python/tf/function for  more details.
+=== Benchmark non-model (data uji 2025, satuan GWh) ===
+Kategori                           Model       RMSE       MAE      MAPE
+   Hydro                      Naive_lag1  98.469133 64.967708 15.773870
+   Hydro             SeasonalNaive_lag12 111.492178 94.771992 25.621681
+   Hydro SeasonalNaive_x_rasio_kapasitas 106.870186 89.630996 26.139595
+   Solar                      Naive_lag1   0.286718  0.237292 12.277630
+   Solar             SeasonalNaive_lag12   0.290078  0.250742 12.575833
+   Solar SeasonalNaive_x_rasio_kapasitas   0.176126  0.134976  7.218584
+    Wind                      Naive_lag1  10.422975  7.328992 13.685895
+    Wind             SeasonalNaive_lag12   9.845536  7.831133 14.069065
+    Wind SeasonalNaive_x_rasio_kapasitas   9.049820  8.174625 14.601911
+
+======================================================================
+VARIAN A (input eksogen bulan-t: TIDAK)
+======================================================================
+  window=3 lr=1e-03 -> RMSE walk-forward = 34.455 (4 lipatan)
+  window=3 lr=1e-04 -> RMSE walk-forward = 25.425 (4 lipatan)
+  window=6 lr=1e-03 -> RMSE walk-forward = 34.145 (4 lipatan)
+  window=6 lr=1e-04 -> RMSE walk-forward = 36.909 (4 lipatan)
+
+  Konfigurasi terpilih (murni dari walk-forward, tanpa melihat 2025): window=3 lr=1e-04 dropout=0.2
+
+======================================================================
+VARIAN B (input eksogen bulan-t: YA)
+======================================================================
+  window=3 lr=1e-03 -> RMSE walk-forward = 33.181 (4 lipatan)
+  window=3 lr=1e-04 -> RMSE walk-forward = 24.634 (4 lipatan)
+  window=6 lr=1e-03 -> RMSE walk-forward = 30.882 (4 lipatan)
+  window=6 lr=1e-04 -> RMSE walk-forward = 34.526 (4 lipatan)
+
+  Konfigurasi terpilih (murni dari walk-forward, tanpa melihat 2025): window=3 lr=1e-04 dropout=0.2
+
+=== Hasil pada data uji 2025 (satuan GWh) ===
+Varian Kategori  Model      RMSE       MAE      MAPE
+     A    Hydro LSTM_A 76.853390 47.030919 11.892441
+     A    Solar LSTM_A  0.370783  0.315848 16.535012
+     A     Wind LSTM_A 11.131878  8.406390 15.468587
+     B    Hydro LSTM_B 81.213123 51.018721 12.445997
+     B    Solar LSTM_B  0.402879  0.332861 17.278926
+     B     Wind LSTM_B 10.519998  7.876319 14.332936
+
+=== Peringkat per kategori (RMSE terkecil) ===
+Kategori                           Model       RMSE       MAE      MAPE
+   Hydro                          LSTM_A  76.853390 47.030919 11.892441
+   Hydro                          LSTM_B  81.213123 51.018721 12.445997
+   Hydro                      Naive_lag1  98.469133 64.967708 15.773870
+   Hydro SeasonalNaive_x_rasio_kapasitas 106.870186 89.630996 26.139595
+   Hydro             SeasonalNaive_lag12 111.492178 94.771992 25.621681
+   Solar SeasonalNaive_x_rasio_kapasitas   0.176126  0.134976  7.218584
+   Solar                      Naive_lag1   0.286718  0.237292 12.277630
+   Solar             SeasonalNaive_lag12   0.290078  0.250742 12.575833
+   Solar                          LSTM_A   0.370783  0.315848 16.535012
+   Solar                          LSTM_B   0.402879  0.332861 17.278926
+    Wind SeasonalNaive_x_rasio_kapasitas   9.049820  8.174625 14.601911
+    Wind             SeasonalNaive_lag12   9.845536  7.831133 14.069065
+    Wind                      Naive_lag1  10.422975  7.328992 13.685895
+    Wind                          LSTM_B  10.519998  7.876319 14.332936
+    Wind                          LSTM_A  11.131878  8.406390 15.468587
+
+Output ditulis ke: C:\prediksi-lstm-ebt-react-app\audit\results\experiment_improved
+
+PERINGATAN VARIAN B: varian ini melihat Cuaca di bulan target. Karena kolom Produksi pada dataset ini DIBANGUN dari Cuaca dan Kapasitas, sebagian besar keunggulan varian B adalah artefak konstruksi dataset -- bukan bukti kemampuan prediksi. Jangan laporkan angkanya sebagai akurasi peramalan tanpa pengungkapan ini.
+EXIT=0
