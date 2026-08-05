@@ -657,115 +657,73 @@ export const MONTHLY_FORECAST_PER_PLT = {
   ]
 };
 
-// Pembanding metode: LSTM Fine-Tuning vs ARIMA(1,1,1) vs Naive Persistence,
-// evaluasi pada data uji tahun 2025 (split identik untuk ketiganya).
-export const BASELINE_COMPARISON = [
+// Pembanding metode pada data uji 2025 -- MODEL PRODUKSI (pooled + category
+// embedding + ensembling) yang benar-benar dipakai backend, BUKAN lagi model
+// tahap Fine-Tuning dari pipeline lama.
+//
+// Sumber angka (disalin dari artefak pipeline, bukan ditulis tangan):
+//   lstm     -> audit/results/production_model/evaluation/evaluasi_final.csv
+//   naive    -> audit/results/experiment_improved/benchmark_2025.csv (Naive_lag1)
+//   seasonal -> audit/results/experiment_improved/benchmark_2025.csv
+//               (SeasonalNaive_x_rasio_kapasitas)
+//   arima    -> audit/results/baseline_comparison.csv
+//
+// Split & metrik identik untuk seluruh metode -- diverifikasi lewat fakta
+// RMSE Naive_lag1 (benchmark_2025.csv) == RMSE Naive_Persistence
+// (baseline_comparison.csv) sampai belasan angka di belakang koma.
+//
+// Pemenang ditentukan pakai RMSE. Hasil: LSTM unggul di 3 dari 5 jenis PLT.
+// PLTS & PLTS Atap tetap kalah dari seasonal naive, dan itu DILAPORKAN APA
+// ADANYA -- kombinasi model TIDAK ditukar demi memperbaiki skor test, sebab
+// memilih berdasarkan skor test adalah data leakage (lihat
+// audit/results/framing_findings.md bagian "Catatan jujur").
+export const MODEL_COMPARISON = [
   {
-    "plt": "PLTA",
-    "model": "ARIMA(1, 1, 1)",
-    "rmse": 117.66,
-    "mae": 99.465,
-    "mape": 29.29
+    plt: 'PLTA',
+    lstm:     { rmse: 77.062, mae: 44.97, mape: 10.99 },
+    arima:    { rmse: 117.66, mae: 99.465, mape: 29.29 },
+    naive:    { rmse: 90.976, mae: 59.883, mape: 15.8 },
+    seasonal: { rmse: 98.278, mae: 82.425, mape: 26.14 },
+    best: 'lstm',
   },
   {
-    "plt": "PLTA",
-    "model": "LSTM_FineTuning",
-    "rmse": 90.648,
-    "mae": 72.538,
-    "mape": 20.62
+    plt: 'PLTB',
+    lstm:     { rmse: 5.071, mae: 3.995, mape: 7.49 },
+    arima:    { rmse: 11.866, mae: 8.618, mape: 13.65 },
+    naive:    { rmse: 10.423, mae: 7.329, mape: 13.69 },
+    seasonal: { rmse: 9.05, mae: 8.175, mape: 14.6 },
+    best: 'lstm',
   },
   {
-    "plt": "PLTA",
-    "model": "Naive_Persistence",
-    "rmse": 90.976,
-    "mae": 59.883,
-    "mape": 15.8
+    plt: 'PLTM',
+    lstm:     { rmse: 5.831, mae: 3.05, mape: 8.9 },
+    arima:    { rmse: 10.309, mae: 9.103, mape: 32.96 },
+    naive:    { rmse: 7.497, mae: 5.084, mape: 15.49 },
+    seasonal: { rmse: 8.592, mae: 7.206, mape: 26.14 },
+    best: 'lstm',
   },
   {
-    "plt": "PLTB",
-    "model": "ARIMA(1, 1, 1)",
-    "rmse": 11.866,
-    "mae": 8.618,
-    "mape": 13.65
+    plt: 'PLTS',
+    lstm:     { rmse: 0.0958, mae: 0.0673, mape: 7.9 },
+    arima:    { rmse: 0.548, mae: 0.5342, mape: 57.7 },
+    naive:    { rmse: 0.1363, mae: 0.1108, mape: 12.65 },
+    seasonal: { rmse: 0.0801, mae: 0.0614, mape: 7.22 },
+    best: 'seasonal',
   },
   {
-    "plt": "PLTB",
-    "model": "LSTM_FineTuning",
-    "rmse": 12.679,
-    "mae": 10.727,
-    "mape": 20.42
+    plt: 'PLTS Atap',
+    lstm:     { rmse: 0.1138, mae: 0.0813, mape: 7.92 },
+    arima:    { rmse: 0.5668, mae: 0.5477, mape: 49.1 },
+    naive:    { rmse: 0.1509, mae: 0.1265, mape: 11.97 },
+    seasonal: { rmse: 0.096, mae: 0.0736, mape: 7.22 },
+    best: 'seasonal',
   },
-  {
-    "plt": "PLTB",
-    "model": "Naive_Persistence",
-    "rmse": 10.423,
-    "mae": 7.329,
-    "mape": 13.69
-  },
-  {
-    "plt": "PLTM",
-    "model": "ARIMA(1, 1, 1)",
-    "rmse": 10.309,
-    "mae": 9.103,
-    "mape": 32.96
-  },
-  {
-    "plt": "PLTM",
-    "model": "LSTM_FineTuning",
-    "rmse": 10.122,
-    "mae": 7.873,
-    "mape": 28.88
-  },
-  {
-    "plt": "PLTM",
-    "model": "Naive_Persistence",
-    "rmse": 7.497,
-    "mae": 5.084,
-    "mape": 15.49
-  },
-  {
-    "plt": "PLTS",
-    "model": "ARIMA(1, 1, 1)",
-    "rmse": 0.548,
-    "mae": 0.534,
-    "mape": 57.7
-  },
-  {
-    "plt": "PLTS",
-    "model": "LSTM_FineTuning",
-    "rmse": 0.119,
-    "mae": 0.095,
-    "mape": 10.5
-  },
-  {
-    "plt": "PLTS",
-    "model": "Naive_Persistence",
-    "rmse": 0.136,
-    "mae": 0.111,
-    "mape": 12.65
-  },
-  {
-    "plt": "PLTS Atap",
-    "model": "ARIMA(1, 1, 1)",
-    "rmse": 0.567,
-    "mae": 0.548,
-    "mape": 49.1
-  },
-  {
-    "plt": "PLTS Atap",
-    "model": "LSTM_FineTuning",
-    "rmse": 0.155,
-    "mae": 0.116,
-    "mape": 10.15
-  },
-  {
-    "plt": "PLTS Atap",
-    "model": "Naive_Persistence",
-    "rmse": 0.151,
-    "mae": 0.126,
-    "mape": 11.97
-  }
 ];
+
+// Rekap kemenangan dihitung dari MODEL_COMPARISON, supaya narasi di halaman
+// tidak pernah bisa berbeda dari isi tabelnya.
+export const LSTM_MENANG = MODEL_COMPARISON.filter(r => r.best === 'lstm').length;
+export const MODEL_TOTAL_PLT = MODEL_COMPARISON.length;
 
 // Contoh baris data historis untuk halaman Data EBT -- diambil dari
 // audit/source/DATA_REGIONAL_5JENIS.csv.

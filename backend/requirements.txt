@@ -15,6 +15,12 @@ pydantic>=2.9
 python-multipart==0.0.20
 openpyxl>=3.1
 
+# Dipakai backend/cuaca.py untuk menarik observasi cuaca bulanan dari
+# NASA POWER (power.larc.nasa.gov) saat bulan target sudah lewat. Kalau
+# panggilan gagal, sistem jatuh ke normal klimatologis dari database --
+# jadi ketiadaan internet tidak mematikan halaman Prediksi.
+requests>=2.32
+
 # Untuk memuat model_final_*.keras & scaler_*.pkl (Task Group 7). Versi
 # mengikuti apa yang sudah dipakai saat model ini dilatih oleh pipeline.
 tensorflow==2.19.0

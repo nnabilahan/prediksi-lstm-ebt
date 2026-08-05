@@ -40,3 +40,6 @@ __pycache__/
 # Backend: database lokal hasil migrasi (regenerate dengan
 # `python backend/migrate_csv.py`, jadi tidak perlu ikut di-commit).
 backend/*.db
+
+# Cadangan database hasil pembersihan manual -- jangan ikut di-commit.
+backend/*.db.backup-*

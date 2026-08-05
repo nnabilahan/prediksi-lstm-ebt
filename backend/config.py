@@ -52,6 +52,10 @@ JENIS_PLT_VALID = [
 SUMBER_REKONSTRUKSI = "rekonstruksi"
 SUMBER_INPUT_PENGGUNA = "input_pengguna"
 
+# Dipakai endpoint GET /api/data untuk memvalidasi query `sumber`, supaya nilai
+# yang tidak dikenal ditolak alih-alih mengembalikan tabel kosong.
+SUMBER_VALID = (SUMBER_REKONSTRUKSI, SUMBER_INPUT_PENGGUNA)
+
 
 def load_konfigurasi_model() -> dict:
     """Baca konfigurasi_model.json (per jenis PLT: combo_id, window_size,

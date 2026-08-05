@@ -19,9 +19,13 @@ Pastikan perangkat sudah terinstal:
 | npm       | 9.x           | `npm -v`    |
 | Python    | 3.10–3.12     | `python --version` |
 
-Python dibutuhkan untuk menjalankan **backend** (lihat [Menjalankan Backend](#menjalankan-backend)) — dashboard, gap analysis RUED, dan perbandingan ARIMA/Naive tetap statis dan tidak butuh backend untuk ditampilkan; backend hanya dipakai untuk mengelola data historis (CRUD) dan menjalankan inferensi LSTM langsung dari halaman **Data EBT** dan **Prediksi**.
+Python dibutuhkan untuk menjalankan **backend** (lihat [Menjalankan Backend](#menjalankan-backend)) — Dashboard dan Gap Analysis RUED tetap statis dan tidak butuh backend untuk ditampilkan; backend dipakai untuk mengelola data historis (CRUD) dan menjalankan inferensi LSTM di halaman **Data EBT** dan **Prediksi**.
 
-Backend juga butuh artefak model & scaler hasil pipeline training (`audit/results/pipeline_run/EBT_LSTM_Streamlit/models/*.keras` dan `.../scalers/*.pkl`) sudah ada di mesin lokal — file ini besar dan tidak ikut di-commit ke git (lihat `.gitignore`), jadi harus tersedia dari hasil run pipeline sebelumnya.
+Backend juga butuh artefak model produksi (`audit/results/production_model/models/*.keras` beserta `config/konfigurasi_model.json` dan `scalers/scaler_params.json`) sudah ada di mesin lokal. File `.keras` tidak ikut di-commit ke git — reproduksi dalam hitungan menit dengan:
+
+```bash
+python audit/analysis/build_production_model.py
+```
 
 ---
 
@@ -62,15 +66,15 @@ Buka **http://localhost:5173** di browser (Chrome / Edge / Firefox).
 
 ### 3. Jalankan backend (terminal terpisah)
 
-Lihat [Menjalankan Backend](#menjalankan-backend) di bawah untuk langkah lengkap (install dependensi, migrasi data awal, start server). Backend harus berjalan di **http://localhost:8000** — CORS di backend sudah dikonfigurasi untuk menerima permintaan dari `localhost:5173`.
+Lihat [Menjalankan Backend](#menjalankan-backend) di bawah untuk langkah lengkap (install dependensi, migrasi data awal, start server). Backend harus berjalan di **http://localhost:8000** — CORS di backend menerima permintaan dari origin `localhost` port berapa pun, jadi tetap jalan kalau Vite pindah ke 5174/5175.
 
-Tanpa backend berjalan, halaman **Data EBT** dan panel **"Inferensi langsung"** di halaman **Prediksi** akan menampilkan pesan error yang jelas ("Tidak dapat terhubung ke backend...") alih-alih data — sisa aplikasi (Dashboard, Gap Analysis RUED, forecast statis 2026–2028) tetap berfungsi normal karena datanya statis dari `src/lib/data.js`.
+Tanpa backend berjalan, halaman **Data EBT** dan **Prediksi** akan menampilkan pesan error yang jelas ("Tidak dapat terhubung ke backend...") alih-alih data — Dashboard dan Gap Analysis RUED tetap berfungsi normal karena datanya statis dari `src/lib/data.js`.
 
 ---
 
 ## Menjalankan Backend
 
-Backend melayani dua hal: **CRUD data historis EBT** (tambah/ubah/hapus/impor/ekspor, dipakai halaman Data EBT) dan **inferensi model LSTM langsung** (dipakai panel "Inferensi langsung" di halaman Prediksi). Backend **tidak pernah melatih ulang model** — hanya memuat model `.keras` dan scaler `.pkl` yang sudah ada hasil pipeline training.
+Backend melayani tiga hal: **CRUD data historis EBT** (dipakai halaman Data EBT), **penyiapan bahan inferensi** (`GET /api/prediksi/siap` — window historis + nilai cuaca otomatis), dan **inferensi model LSTM** (`POST /api/predict`). Backend **tidak pernah melatih ulang model** — hanya memuat artefak `.keras` yang sudah ada.
 
 ### 1. Install dependensi Python
 
@@ -89,7 +93,9 @@ cd backend
 python migrate_csv.py
 ```
 
-Mengisi database SQLite lokal (`backend/siprebar.db`, dibuat otomatis, tidak ikut di-commit) dengan 252 baris dari `audit/source/DATA_PHASE_3_REGIONAL_MODIFIED.csv` — data hasil **rekonstruksi/estimasi** (lihat `audit/source/README.md`), ditandai `sumber = "rekonstruksi"` di setiap baris. Skrip menolak jalan ulang kalau database sudah terisi (supaya tidak menggandakan data); pakai `python migrate_csv.py --reset` kalau sengaja ingin mengosongkan dan mengisi ulang.
+Mengisi database SQLite lokal (`backend/siprebar.db`, dibuat otomatis, tidak ikut di-commit) dengan **180 baris** dari `audit/source/DATA_REGIONAL_5JENIS.csv` (5 jenis PLT × 3 tahun × 12 bulan, **regional Sulawesi Selatan**), ditandai `sumber = "rekonstruksi"` di setiap baris. Skrip menolak jalan ulang kalau database sudah terisi (supaya tidak menggandakan data); pakai `python migrate_csv.py --reset` kalau sengaja ingin mengosongkan dan mengisi ulang.
+
+> **Penting — jangan mengimpor dataset nasional ke database ini.** Aplikasi menampilkan data **regional Sulsel**. Dataset nasional (`DATA_NASIONAL_*.csv`) memakai skala kapasitas yang jauh berbeda (PLTA ±5.000–6.000 MW vs ±650–790 MW regional) dan hanya memuat 4 jenis PLT. Mencampurnya lewat fitur Impor akan membuat tabel menampilkan dua versi untuk tahun yang sama dan statistik menjadi salah. Filter **Asal data** di halaman Data EBT bisa dipakai untuk memeriksa baris mana yang berasal dari dataset awal dan mana yang ditambahkan sendiri.
 
 ### 3. Jalankan server backend
 
@@ -154,9 +160,11 @@ siprebar/
 │   ├── schemas.py            # Skema Pydantic request/response
 │   ├── ml.py                 # Muat model/scaler LSTM sekali saat startup, fungsi inferensi
 │   ├── migrate_csv.py        # Migrasi data awal CSV -> database (sekali jalan)
+│   ├── cuaca.py              # Ambil nilai Cuaca: NASA POWER (bulan lampau) / klimatologi
 │   ├── routers/
 │   │   ├── data.py           # GET/POST/PUT/DELETE /api/data, export, import
-│   │   └── predict.py        # POST /api/predict (4 lapis validasi)
+│   │   ├── predict.py        # POST /api/predict (4 lapis validasi)
+│   │   └── prediksi_cepat.py # GET /api/prediksi/siap (window histori + cuaca otomatis)
 │   ├── requirements.txt
 │   └── siprebar.db           # Database SQLite lokal (dibuat migrate_csv.py, tidak di-commit)
 ├── src/
@@ -171,13 +179,11 @@ siprebar/
 │   │   │   └── Footer.jsx   # Footer sitasi
 │   │   ├── ui/              # Komponen UI (Panel, Stat, Note, Gauge, dll.)
 │   │   └── charts/          # Komponen chart (MonthlyChart, DonutChart, dll.)
-│   ├── pages/               # 6 halaman utama
+│   ├── pages/               # 4 halaman utama
 │   │   ├── Dashboard.jsx    # Statis (data.js)
-│   │   ├── Prediksi.jsx     # Forecast statis (data.js) + panel "Inferensi langsung" (backend)
+│   │   ├── Prediksi.jsx     # Live: inferensi LSTM 1 bulan ke depan lewat backend
 │   │   ├── GapAnalysis.jsx  # Statis (data.js)
-│   │   ├── DataEBT.jsx      # Live dari backend (GET/POST/PUT/DELETE/import/export /api/data)
-│   │   ├── Laporan.jsx
-│   │   └── Pengaturan.jsx
+│   │   └── DataEBT.jsx      # Live dari backend (GET/POST/PUT/DELETE/import/export /api/data)
 │   ├── App.jsx
 │   └── main.jsx
 ├── audit/                    # Pipeline training, hasil audit, dan artefak model (lihat audit/*/README*)
@@ -211,14 +217,88 @@ Bagian tertentu dari aplikasi **sengaja tetap statis** dari `src/lib/data.js` (h
 
 | Halaman / bagian | Sumber | Live via backend? |
 |---|---|---|
-| Dashboard — tren & ringkasan | `data.js` | Tidak |
-| Gap Analysis RUED | `data.js` | Tidak |
-| Prediksi — grafik & tabel forecast 2026–2028 | `data.js` | Tidak |
-| Prediksi — perbandingan LSTM vs ARIMA/Naive | `data.js` | Tidak |
-| Prediksi — panel **"Inferensi langsung"** | `POST /api/predict` | **Ya** |
+| Dashboard — seluruh isi | `data.js` | Tidak |
+| Gap Analysis — forecast & gap RUED | `data.js` | Tidak |
+| Gap Analysis — tabel pembanding metode | `data.js` (`MODEL_COMPARISON`) | Tidak |
+| Prediksi — penyiapan data & cuaca | `GET /api/prediksi/siap` | **Ya** |
+| Prediksi — inferensi LSTM | `POST /api/predict` | **Ya** |
 | Data EBT — tabel, tambah/ubah/hapus/impor/ekspor | `GET/POST/PUT/DELETE /api/data`, `/export`, `/import` | **Ya** |
 
-`data.js` dibuat ulang oleh `audit/analysis/export_dashboard_data.py` — jangan diedit manual, dan jangan diganti jadi fetch ke backend untuk bagian-bagian di atas yang statis.
+Alasan bagian statis tetap statis: angka forecast 2026–2028 dan hasil evaluasi model adalah **keluaran pipeline riset yang sudah difinalisasi**. Menjadikannya live berarti angka di skripsi bisa berubah hanya karena seseorang menambah satu baris di database.
+
+**Perbedaan grafik Dashboard vs halaman Prediksi** — keduanya bukan hal yang sama:
+
+| | Dashboard | Prediksi |
+|---|---|---|
+| Horizon | 36 bulan (2026–2028) | 1 bulan ke depan |
+| Dihitung kapan | sekali, saat pipeline riset dijalankan | saat tombol ditekan |
+| Sifat | otoregresif (prediksi jadi input bulan berikutnya) | satu langkah, dari data historis nyata |
+| Cuaca | asumsi normal klimatologis sepanjang horizon | NASA POWER kalau tersedia, kalau tidak klimatologis |
+
+---
+
+## Metodologi & Catatan Data
+
+Bagian ini memuat catatan yang sebelumnya ditempelkan sebagai card di antarmuka. Dipindahkan ke sini supaya halaman tetap ringkas, tanpa menghilangkan kualifikasi yang wajib diungkap di laporan.
+
+### Asal-usul dataset
+
+Cakupan: **sektor kelistrikan Provinsi Sulawesi Selatan**, 5 jenis PLT (PLTA, PLTB, PLTM, PLTS, PLTS Atap), Januari 2023 – Desember 2025 (180 baris bulanan).
+
+| Kolom | Asal | Status |
+|---|---|---|
+| Produksi (GWh) | disagregasi bulanan dari angka **tahunan** Dinas ESDM Sulsel | **rekonstruksi**, bukan metering langsung |
+| Kapasitas (MW) | data kapasitas terpasang Dinas ESDM Sulsel | tercatat |
+| Cuaca | NASA POWER (`power.larc.nasa.gov`) | observasi riil |
+
+Angka tahunan Dinas ESDM sendiri merupakan kalkulasi **Kapasitas × Capacity Factor asumsi × 8760 jam**, bukan hasil pengukuran meter. Konsekuensinya: kolom Produksi mewarisi pola dari Kapasitas dan asumsi CF. Ini di luar kendali penelitian — dataset tersebut yang tersedia dan disetujui sebagai sumber resmi. Skrip disagregasi ada di `audit/source/disagregasi_regional.py`, dokumentasi lengkap di `audit/source/DOKUMENTASI_DATASET_REGIONAL_V2.md`.
+
+Parameter cuaca per kategori (titik koordinat di `backend/cuaca.py`, disalin dari `audit/source/tarik_cuaca_nasa_power.py`):
+
+| Jenis PLT | Parameter NASA POWER | Satuan |
+|---|---|---|
+| PLTA, PLTM | `PRECTOTCORR` (curah hujan) | mm/hari |
+| PLTB | `WS10M` (kecepatan angin 10 m) | m/s |
+| PLTS, PLTS Atap | `ALLSKY_SFC_SW_DWN` (radiasi) | kWh/m² |
+
+### Model produksi
+
+Dibangun oleh `audit/analysis/build_production_model.py` → `audit/results/production_model/`. Arsitektur: **pooled LSTM + category embedding + ensembling 3 seed**, kombinasi per jenis PLT dipilih lewat **walk-forward validation** (bukan skor data uji).
+
+| Jenis PLT | Kombinasi | Window |
+|---|---|---|
+| PLTA | Varian B, lr 1e−3 | 3 bulan |
+| PLTB | Varian B, lr 1e−3 | **6 bulan** |
+| PLTM | Varian B, lr 1e−4 | 3 bulan |
+| PLTS, PLTS Atap | Varian C, lr 1e−3 (berbagi 1 model) | 3 bulan |
+
+Window berbeda per jenis PLT karena tiap kategori punya konfigurasi pemenang sendiri — itulah sebabnya form Prediksi meminta 6 bulan untuk PLTB dan 3 bulan untuk sisanya.
+
+PLTS dan PLTS Atap memakai **file model yang sama**, dibedakan lewat category embedding. Jadi PLTS Atap tetap punya representasi di tabel evaluasi meskipun tidak menjalani fine-tuning terpisah.
+
+### Hasil evaluasi (data uji 2025, RMSE dalam GWh)
+
+| Jenis PLT | LSTM | ARIMA(1,1,1) | Naive lag-1 | Seasonal × Kapasitas | Terbaik |
+|---|---|---|---|---|---|
+| PLTA | **77,06** | 117,66 | 90,98 | 98,28 | LSTM |
+| PLTB | **5,07** | 11,87 | 10,42 | 9,05 | LSTM |
+| PLTM | **5,83** | 10,31 | 7,50 | 8,59 | LSTM |
+| PLTS | 0,0958 | 0,5480 | 0,1363 | **0,0801** | Seasonal |
+| PLTS Atap | 0,1138 | 0,5668 | 0,1509 | **0,0960** | Seasonal |
+
+**LSTM unggul di 3 dari 5 jenis PLT**, dengan akurasi (100 − MAPE) 89–93% di kelimanya.
+
+> **Catatan integritas.** PLTS & PLTS Atap kalah tipis dari seasonal naive, dan itu dilaporkan apa adanya. Kombinasi model **tidak ditukar** ke varian yang skor data ujinya kebetulan lebih bagus — memilih berdasarkan data uji adalah kebocoran data (*test-set leakage*) yang membuat angka evaluasi tidak lagi sah. Sebelum ensembling LSTM sempat unggul 4 dari 5, tapi selektor walk-forward memilih varian C untuk PLTS Atap dan itu dipertahankan. Uraian lengkap: `audit/results/framing_findings.md` bagian *"Catatan jujur"*.
+
+### Keterbatasan yang wajib diungkap
+
+- **Forecast bukan pengukuran capaian RUED.** Target RUED diukur dalam **persen bauran energi daerah**, sedangkan keluaran model adalah **GWh produksi kelistrikan**. Keduanya tidak bisa dibandingkan langsung tanpa data total energi daerah (listrik + non-listrik) sebagai penyebut. Forecast berperan sebagai *informasi pendukung* evaluasi RUED.
+- **Hanya sektor kelistrikan.** Biofuel, biogas, dan energi termal tidak diprediksi karena dokumentasi historisnya belum konsisten.
+- **Forecast 2026–2028 memakai asumsi**: Cuaca = normal klimatologis per bulan kalender (rata-rata 2023–2025), bukan prakiraan operasional — horizon 3 tahun di luar jangkauan prakiraan BMKG. Kapasitas diasumsikan **tetap** di level Desember 2025, tidak memperhitungkan rencana penambahan kapasitas di RUED/RUPTL.
+- **Akumulasi galat.** Forecast jangka panjang bersifat otoregresif — prediksi satu bulan menjadi input bulan berikutnya, sehingga kesalahan menumpuk sepanjang periode.
+- **Model butuh cuaca bulan yang ditebak.** Seluruh kombinasi pemenang adalah model *known-future covariate*. Untuk bulan yang sudah lewat, sistem menarik observasi riil dari NASA POWER; untuk bulan yang belum lewat, dipakai normal klimatologis — dan asal angkanya selalu ditandai di antarmuka.
+- **NASA POWER punya jeda terbit.** Data bulanan biasanya tertinggal beberapa bulan dari tanggal hari ini. Kalau bulan yang diminta belum terbit, sistem otomatis jatuh ke normal klimatologis dan menyatakannya, bukan diam-diam.
+- **Menambah data tidak melatih ulang model.** Pelatihan ulang dijalankan terpisah lewat `audit/analysis/build_production_model.py`.
 
 ---
 
@@ -245,11 +325,11 @@ npm run dev -- --port 3000
 **Halaman kosong / error di browser**
 Buka DevTools (F12) → tab Console, perhatikan pesan error. Pastikan `npm install` sudah dijalankan sebelum `npm run dev`.
 
-**Halaman Data EBT / panel "Inferensi langsung" menampilkan "Tidak dapat terhubung ke backend"**
+**Halaman Data EBT / Prediksi menampilkan "Tidak dapat terhubung ke backend"**
 Backend belum berjalan, atau berjalan di port selain 8000. Cek `http://localhost:8000/api/health` bisa diakses langsung dari browser; kalau tidak, jalankan backend (lihat [Menjalankan Backend](#menjalankan-backend)).
 
 **`/api/health` menunjukkan `"status": "degraded"` atau `"artefak_model_lengkap": false`**
-Artinya model (`.keras`) atau scaler (`.pkl`) untuk salah satu jenis PLT tidak ditemukan di mesin ini — periksa `artefak_per_plt` di response untuk tahu PLT mana yang bermasalah. File ini besar dan tidak ikut di-commit ke git (lihat catatan di [Prasyarat](#prasyarat)); salin folder `audit/results/pipeline_run/EBT_LSTM_Streamlit/models/` dan `.../scalers/` dari hasil run pipeline sebelumnya. Endpoint CRUD (`/api/data`) tetap berfungsi normal walau artefak model belum ada — hanya `/api/predict` yang akan menolak dengan `503`.
+Artinya model (`.keras`) atau scaler (`.pkl`) untuk salah satu jenis PLT tidak ditemukan di mesin ini — periksa `artefak_per_plt` di response untuk tahu PLT mana yang bermasalah. File ini besar dan tidak ikut di-commit ke git (lihat catatan di [Prasyarat](#prasyarat)); bangun ulang dengan `python audit/analysis/build_production_model.py` (butuh beberapa menit). Endpoint CRUD (`/api/data`) tetap berfungsi normal walau artefak model belum ada — hanya `/api/predict` yang akan menolak dengan `503`.
 
 **Migrasi (`python migrate_csv.py`) gagal dengan pesan "tabel sudah berisi N baris"**
 Migrasi ini dirancang sekali jalan supaya tidak menggandakan data. Kalau memang ingin mengosongkan dan mengisi ulang dari CSV sumber, pakai `python migrate_csv.py --reset` (ini akan menghapus juga data yang sudah diinput/diimpor pengguna).

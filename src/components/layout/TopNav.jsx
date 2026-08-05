@@ -1,4 +1,4 @@
-import { Zap, ChevronDown, LayoutDashboard, TrendingUp, Target, Database, FileText, Settings } from 'lucide-react';
+import { Zap, ChevronDown, LayoutDashboard, TrendingUp, Target, Database } from 'lucide-react';
 import { C } from '../../lib/tokens';
 
 const TABS = [
@@ -6,8 +6,6 @@ const TABS = [
   { key: 'prediksi',    label: 'Prediksi EBT',        icon: TrendingUp },
   { key: 'gap',         label: 'Gap Analysis RUED',   icon: Target },
   { key: 'data',        label: 'Data EBT',            icon: Database },
-  { key: 'laporan',     label: 'Laporan',             icon: FileText },
-  { key: 'pengaturan',  label: 'Pengaturan',          icon: Settings },
 ];
 
 function getTodayID() {

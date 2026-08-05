@@ -2,7 +2,6 @@ import { Zap, Layers, Target, Globe } from 'lucide-react';
 import PageHead from '../components/ui/PageHead';
 import Panel from '../components/ui/Panel';
 import Stat from '../components/ui/Stat';
-import Note from '../components/ui/Note';
 import Footer from '../components/layout/Footer';
 import MonthlyChart from '../components/charts/MonthlyChart';
 import AnnualChart from '../components/charts/AnnualChart';
@@ -116,12 +115,7 @@ export default function Dashboard({ go }) {
           title="Tren produksi EBT historis"
           subtitle={`Total tahunan ${ANNUAL_ACTUAL[0]?.year}–${lastActual?.year} + proyeksi`}
         >
-          <div className="space-y-3">
-            <AnnualChart data={TREND_ANNUAL} height={224} />
-            <Note tone="warn">
-              <strong>Kolom Produksi 2023–2025 adalah hasil disagregasi bulanan dari angka tahunan Dinas ESDM Sulsel</strong> — dan angka tahunan itu sendiri merupakan kalkulasi (Kapasitas × Capacity Factor asumsi × 8760 jam), bukan metering langsung. Kolom Cuaca adalah data riil NASA POWER.
-            </Note>
-          </div>
+          <AnnualChart data={TREND_ANNUAL} height={224} />
         </Panel>
         <Panel
           className="lg:col-span-7"
@@ -155,10 +149,10 @@ export default function Dashboard({ go }) {
         </Panel>
       </div>
 
-      {/* Summary + notes row */}
+      {/* Summary row */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
         <Panel
-          className="lg:col-span-5"
+          className="lg:col-span-12"
           title="Ringkasan total forecast per tahun"
           right={
             <button
@@ -188,22 +182,6 @@ export default function Dashboard({ go }) {
               </tr>
             ))}
           />
-        </Panel>
-        <Panel className="lg:col-span-7" title="Catatan pembacaan">
-          <div className="space-y-3">
-            <Note tone="info">
-              Forecast produksi EBT sektor kelistrikan digunakan sebagai <strong>informasi pendukung</strong> evaluasi implementasi RUED, bukan sebagai pengukuran langsung capaian target bauran energi ({RUED_FROM.persen}% tahun {RUED_FROM.year}, {RUED_TO.persen}% tahun {RUED_TO.year}).
-            </Note>
-            <Note tone="warn">
-              Analisis hanya mencakup <strong>sektor kelistrikan</strong>. Sektor non-listrik (biofuel, biogas, energi termal) tidak diprediksi karena dokumentasi historisnya belum konsisten.
-            </Note>
-            <Note tone="info">
-              Nilai forecast berasal dari model LSTM yang <strong>sudah dilatih sebelumnya</strong>. Membuka halaman ini tidak menjalankan pelatihan atau inferensi baru.
-            </Note>
-            <Note tone="warn">
-              Forecast 2026–2028 memakai asumsi <strong>Cuaca = normal klimatologis</strong> per bulan kalender (rata-rata 2023–2025), bukan prakiraan cuaca operasional — horizon 3 tahun di luar jangkauan prakiraan BMKG. <strong>Kapasitas diasumsikan tetap</strong> di level Desember 2025, tidak memperhitungkan rencana penambahan kapasitas EBT yang mungkin ada di RUED/RUPTL. Forecast juga bersifat otoregresif (prediksi satu bulan menjadi input bulan berikutnya), sehingga kesalahan dapat terakumulasi sepanjang periode.
-            </Note>
-          </div>
         </Panel>
       </div>
 

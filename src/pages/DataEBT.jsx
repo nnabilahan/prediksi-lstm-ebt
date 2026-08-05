@@ -17,6 +17,13 @@ const MONTHS = ['Semua Bulan','Januari','Februari','Maret','April','Mei','Juni',
 
 const MONTH_NAMES_ID = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
 
+// Label filter "Asal data" -> nilai kolom `sumber` di database. Memisahkan
+// dataset bawaan dari baris yang ditambahkan sendiri lewat form/impor.
+const SUMBER_FILTER = {
+  'Dataset awal': 'rekonstruksi',
+  'Data yang saya tambahkan': 'input_pengguna',
+};
+
 function formatTanggalDisplay(isoDate) {
   if (!isoDate) return '';
   const d = new Date(isoDate);
@@ -61,6 +68,7 @@ export default function DataEBT() {
   const [tahunF, setTahunF]   = useState('Semua Tahun');
   const [bulanF, setBulanF]   = useState('Semua Bulan');
   const [jenisF, setJenisF]   = useState('Semua Jenis PLT');
+  const [sumberF, setSumberF] = useState('Semua Asal');
   const [openPanel, setOpenPanel] = useState(null);
 
   // Tambah form state
@@ -105,14 +113,20 @@ export default function DataEBT() {
   useEffect(() => { fetchRows(); }, []);
 
   const shown = useMemo(() => {
+    // `r.tanggal` sudah berformat tampilan "01 Jan 2023", jadi tahun diambil
+    // dari 4 karakter terakhir dan bulan dicocokkan lewat singkatannya.
+    const bulanIdx = MONTHS.indexOf(bulanF) - 1; // -1 = "Semua Bulan"
     return rows.filter(r => {
       const matchQ = query === '' ||
         r.jenis.toLowerCase().includes(query.toLowerCase()) ||
         r.tanggal.toLowerCase().includes(query.toLowerCase());
       const matchJ = jenisF === 'Semua Jenis PLT' || r.jenis === jenisF;
-      return matchQ && matchJ;
+      const matchT = tahunF === 'Semua Tahun' || r.tanggal.slice(-4) === tahunF;
+      const matchB = bulanIdx < 0 || r.tanggal.slice(3, 6) === MONTH_NAMES_ID[bulanIdx];
+      const matchS = sumberF === 'Semua Asal' || r.sumber === SUMBER_FILTER[sumberF];
+      return matchQ && matchJ && matchT && matchB && matchS;
     });
-  }, [rows, query, jenisF]);
+  }, [rows, query, jenisF, tahunF, bulanF, sumberF]);
 
   const cuacaAdd = CUACA_CONFIG[formAdd.jenis] || { label: 'Cuaca', satuan: '—', help: '' };
   const cuacaEdit = CUACA_CONFIG[formEdit.jenis] || { label: 'Cuaca', satuan: '—', help: '' };
@@ -275,7 +289,7 @@ export default function DataEBT() {
           subtitle={`Menampilkan ${shown.length} dari ${rows.length} data`}
           noPad
         >
-          <div className="p-4 grid grid-cols-2 sm:grid-cols-4 gap-3" style={{ borderBottom: `1px solid ${C.line}` }}>
+          <div className="p-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3" style={{ borderBottom: `1px solid ${C.line}` }}>
             <Field label="Tahun">
               <select style={inputStyle()} value={tahunF} onChange={e => setTahunF(e.target.value)}>
                 {['Semua Tahun','2023','2024','2025'].map(y => <option key={y}>{y}</option>)}
@@ -290,6 +304,12 @@ export default function DataEBT() {
               <select style={inputStyle()} value={jenisF} onChange={e => setJenisF(e.target.value)}>
                 <option>Semua Jenis PLT</option>
                 {PLANT_KEYS.map(k => <option key={k}>{k}</option>)}
+              </select>
+            </Field>
+            <Field label="Asal data">
+              <select style={inputStyle()} value={sumberF} onChange={e => setSumberF(e.target.value)}>
+                <option>Semua Asal</option>
+                {Object.keys(SUMBER_FILTER).map(k => <option key={k}>{k}</option>)}
               </select>
             </Field>
             <Field label="Cari">
@@ -314,12 +334,13 @@ export default function DataEBT() {
             <DataTable
               minWidth={560}
               cols={[
-                { label: 'ID', width: '8%' },
-                { label: 'Tanggal', width: '22%' },
-                { label: 'Jenis PLT', width: '24%' },
-                { label: 'Produksi (GWh)', width: '16%', align: 'right' },
-                { label: 'Kapasitas (MW)', width: '16%', align: 'right' },
-                { label: 'Cuaca', width: '14%', align: 'right' },
+                { label: 'ID', width: '7%' },
+                { label: 'Tanggal', width: '19%' },
+                { label: 'Jenis PLT', width: '21%' },
+                { label: 'Produksi (GWh)', width: '15%', align: 'right' },
+                { label: 'Kapasitas (MW)', width: '15%', align: 'right' },
+                { label: 'Cuaca', width: '11%', align: 'right' },
+                { label: 'Asal', width: '12%', align: 'right' },
               ]}
               rows={shown.map((r) => (
                 <tr key={r.id} style={{ borderBottom: `1px solid ${C.line}` }}>
@@ -334,15 +355,20 @@ export default function DataEBT() {
                   <Td align="right" mono>{fmt(r.produksi, 3)}</Td>
                   <Td align="right" mono>{fmt(r.kapasitas, 3)}</Td>
                   <Td align="right" mono>{fmt(r.cuaca, 3)}</Td>
+                  <Td align="right">
+                    <span
+                      className="px-2 py-0.5 rounded-md text-[10px] font-medium whitespace-nowrap"
+                      style={r.sumber === 'input_pengguna'
+                        ? { background: C.goldSoft, color: C.gold }
+                        : { background: C.line, color: C.muted }}
+                    >
+                      {r.sumber === 'input_pengguna' ? 'Ditambahkan' : 'Dataset awal'}
+                    </span>
+                  </Td>
                 </tr>
               ))}
             />
           )}
-          <div className="p-4" style={{ borderTop: `1px solid ${C.line}` }}>
-            <Note tone="warn">
-              <strong>Kolom Produksi adalah hasil disagregasi bulanan dari angka tahunan Dinas ESDM Sulsel</strong> — angka tahunan tersebut merupakan kalkulasi (Kapasitas × Capacity Factor asumsi × 8760 jam), bukan metering langsung. Kolom Cuaca adalah data riil NASA POWER.
-            </Note>
-          </div>
         </Panel>
 
         {/* Kelola data accordion */}
@@ -399,6 +425,7 @@ export default function DataEBT() {
                   {addLoading ? 'Menyimpan…' : 'Tambah Data'}
                 </button>
                 {addMsg && <MsgBanner msg={addMsg} />}
+                <KriteriaInput cuaca={cuacaAdd} />
               </form>
             </AccordionItem>
 
@@ -590,6 +617,40 @@ function AccordionItem({ id, icon: Icon, label, open, setOpen, children }) {
           {children}
         </div>
       )}
+    </div>
+  );
+}
+
+// Keterangan kriteria pengisian, ditaruh persis di bawah form supaya syarat
+// yang selama ini cuma tersirat di pesan error backend bisa dibaca lebih dulu.
+// Isinya mengikuti validasi nyata di backend (routers/data.py + schemas.py),
+// bukan aturan yang dikarang di sisi frontend.
+function KriteriaInput({ cuaca }) {
+  const items = [
+    <>Semua kolom <strong>wajib diisi</strong> — tidak ada nilai yang diisi otomatis oleh server.</>,
+    <>Jenis PLT harus salah satu dari 5 kategori ber-model: PLTA, PLTB, PLTM, PLTS, PLTS Atap.</>,
+    <>Satu baris mewakili <strong>satu bulan</strong>; pakai tanggal 1 tiap bulan agar konsisten dengan dataset.</>,
+    <>Produksi (GWh) dan Kapasitas (MW) tidak boleh negatif.</>,
+    <>{cuaca.label} memakai satuan <strong>{cuaca.satuan}</strong> — {cuaca.help}</>,
+    <>Baris tersimpan dengan asal <code>input_pengguna</code>, dan bisa disaring lewat filter <strong>Asal data</strong>.</>,
+  ];
+  return (
+    <div className="rounded-lg p-3" style={{ background: C.bg, border: `1px solid ${C.line}` }}>
+      <p className="text-[11px] font-semibold mb-1.5" style={{ color: C.ink }}>
+        Kriteria pengisian
+      </p>
+      <ul className="space-y-1 text-[11px] leading-relaxed" style={{ color: C.muted }}>
+        {items.map((isi, i) => (
+          <li key={i} className="flex gap-1.5">
+            <span style={{ color: C.faint }}>•</span>
+            <span>{isi}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="text-[11px] mt-2 pt-2" style={{ color: C.muted, borderTop: `1px solid ${C.line}` }}>
+        Menambah data <strong>tidak melatih ulang model</strong>. Data baru langsung
+        bisa dipakai sebagai input di halaman Prediksi EBT.
+      </p>
     </div>
   );
 }

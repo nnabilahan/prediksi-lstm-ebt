@@ -27,6 +27,7 @@ from database import get_db, init_db
 from models import DataHistoris
 from routers import data as data_router
 from routers import predict as predict_router
+from routers import prediksi_cepat as prediksi_cepat_router
 
 logger = logging.getLogger("siprebar")
 
@@ -56,11 +57,16 @@ app = FastAPI(
     version="0.1.0",
 )
 
-# Dev server Vite berjalan di origin berbeda (5173) dari backend (8000),
-# jadi browser butuh izin CORS eksplisit untuk memanggil API ini.
+# Dev server Vite berjalan di origin berbeda dari backend (8000), jadi browser
+# butuh izin CORS eksplisit untuk memanggil API ini.
+#
+# Port-nya tidak dipatok ke 5173: Vite otomatis pindah port kalau 5173 sedang
+# dipakai, dan kalau daftar origin dipatok maka aplikasi diam-diam gagal
+# memuat data dengan error CORS yang membingungkan. Regex ini hanya
+# mengizinkan localhost -- backend ini memang cuma untuk dijalankan lokal.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origin_regex=r"^http://(localhost|127\.0\.0\.1):\d+$",
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -68,6 +74,7 @@ app.add_middleware(
 
 app.include_router(data_router.router)
 app.include_router(predict_router.router)
+app.include_router(prediksi_cepat_router.router)
 
 
 @app.get("/api/health", tags=["health"])

@@ -4,8 +4,6 @@ import Dashboard from './pages/Dashboard';
 import Prediksi from './pages/Prediksi';
 import GapAnalysis from './pages/GapAnalysis';
 import DataEBT from './pages/DataEBT';
-import Laporan from './pages/Laporan';
-import Pengaturan from './pages/Pengaturan';
 import { C } from './lib/tokens';
 
 export default function App() {
@@ -18,8 +16,6 @@ export default function App() {
         {page === 'prediksi'   && <Prediksi />}
         {page === 'gap'        && <GapAnalysis />}
         {page === 'data'       && <DataEBT />}
-        {page === 'laporan'    && <Laporan />}
-        {page === 'pengaturan' && <Pengaturan />}
       </main>
     </div>
   );

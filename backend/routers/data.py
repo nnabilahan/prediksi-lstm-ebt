@@ -52,6 +52,15 @@ def _ambil_atau_404(db: Session, item_id: int) -> DataHistoris:
 @router.get("", response_model=DataHistorisList)
 def list_data(
     jenis_plt: str | None = Query(None, description="Filter jenis PLT (harus salah satu whitelist)."),
+    sumber: str | None = Query(
+        None,
+        description=(
+            f"Filter asal data: '{config.SUMBER_REKONSTRUKSI}' (dataset awal hasil "
+            f"disagregasi) atau '{config.SUMBER_INPUT_PENGGUNA}' (ditambahkan lewat "
+            "form/impor). Dipakai halaman Data EBT untuk memisahkan data baru dari "
+            "dataset bawaan."
+        ),
+    ),
     limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
@@ -59,11 +68,26 @@ def list_data(
     if jenis_plt is not None:
         _cek_whitelist(jenis_plt)
 
+    # Whitelist juga untuk `sumber`: nilainya ikut tersimpan di kolom database,
+    # jadi salah ketik harus ditolak terang-terangan, bukan diam-diam
+    # mengembalikan tabel kosong yang terbaca seperti "belum ada data".
+    if sumber is not None and sumber not in config.SUMBER_VALID:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Sumber '{sumber}' tidak dikenali. "
+                f"Pilihan yang tersedia: {', '.join(config.SUMBER_VALID)}."
+            ),
+        )
+
     stmt = select(DataHistoris)
     count_stmt = select(func.count()).select_from(DataHistoris)
     if jenis_plt is not None:
         stmt = stmt.where(DataHistoris.jenis_plt == jenis_plt)
         count_stmt = count_stmt.where(DataHistoris.jenis_plt == jenis_plt)
+    if sumber is not None:
+        stmt = stmt.where(DataHistoris.sumber == sumber)
+        count_stmt = count_stmt.where(DataHistoris.sumber == sumber)
 
     total = db.scalar(count_stmt)
     items = db.execute(

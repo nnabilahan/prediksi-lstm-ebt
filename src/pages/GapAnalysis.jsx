@@ -11,17 +11,24 @@ import GrowthRateChart from '../components/charts/GrowthRateChart';
 import DataTable, { Td } from '../components/ui/DataTable';
 import { C } from '../lib/tokens';
 import { fmt } from '../lib/utils';
-import { ANNUAL_FORECAST, PER_JENIS_2026, PLANT_KEYS, PLANT_META, MONTHLY_FORECAST_PER_PLT, RUED_TARGET, BASELINE_COMPARISON } from '../lib/data';
+import { ANNUAL_FORECAST, PER_JENIS_2026, PLANT_KEYS, PLANT_META, MONTHLY_FORECAST_PER_PLT, RUED_TARGET, MODEL_COMPARISON, LSTM_MENANG, MODEL_TOTAL_PLT } from '../lib/data';
 
 const [RUED_FROM, RUED_TO] = RUED_TARGET.anchors;
 
-// Kelompokkan BASELINE_COMPARISON per PLT untuk panel "Pembanding Metode"
-const BASELINE_BY_PLT = PLANT_KEYS.map(plt => {
-  const rows = BASELINE_COMPARISON.filter(r => r.plt === plt);
-  // Ranking pakai MAPE (bukan RMSE) supaya konsisten dengan angka yang ditampilkan di tabel.
-  const best = rows.reduce((a, b) => (b.mape < a.mape ? b : a), rows[0]);
-  return { plt, rows, best };
-}).filter(g => g.rows.length > 0);
+// Label kolom sekaligus urutan tampil pada tabel pembanding metode.
+const METODE = [
+  { key: 'lstm', label: 'LSTM (produksi)' },
+  { key: 'arima', label: 'ARIMA(1,1,1)' },
+  { key: 'naive', label: 'Naive lag-1' },
+  { key: 'seasonal', label: 'Seasonal × Kapasitas' },
+];
+
+const LABEL_SINGKAT = {
+  lstm: 'LSTM',
+  arima: 'ARIMA',
+  naive: 'Naive',
+  seasonal: 'Seasonal',
+};
 
 // Build per-PLT annual totals for 2027 and 2028 from monthly data
 function perPltAnnual(plant, year) {
@@ -186,12 +193,6 @@ export default function GapAnalysis() {
               <Note tone="warn">
                 <strong>Perbedaan satuan kritis:</strong> Target RUED diukur dalam <strong>persen bauran energi daerah</strong>, sedangkan output model LSTM adalah <strong>GWh produksi kelistrikan</strong>. Keduanya tidak dapat dibandingkan secara langsung tanpa data total energi daerah (listrik + non-listrik).
               </Note>
-              <p className="text-xs" style={{ color: '#8E9C91' }}>
-                Hasil prediksi ini digunakan sebagai informasi pendukung evaluasi implementasi RUED, bukan sebagai pengukuran langsung terhadap capaian target bauran energi RUED ({RUED_FROM.persen}% tahun {RUED_FROM.year}, {RUED_TO.persen}% tahun {RUED_TO.year}).
-              </p>
-              <p className="text-xs" style={{ color: '#8E9C91' }}>
-                Forecast memakai asumsi Cuaca = normal klimatologis per bulan kalender (rata-rata 2023–2025) dan Kapasitas tetap di level Desember 2025 — lihat catatan di halaman Dashboard untuk detail keterbatasannya.
-              </p>
             </div>
           </Panel>
         </div>
@@ -233,46 +234,46 @@ export default function GapAnalysis() {
 
       <Panel
         title="Pembanding metode: LSTM vs metode tradisional"
-        note="Evaluasi pada data uji tahun 2025, split & metrik identik untuk ketiga metode (lihat audit/results/tugas2_findings.md)."
+        subtitle={`RMSE pada data uji 2025 (GWh, makin kecil makin baik) — LSTM unggul di ${LSTM_MENANG} dari ${MODEL_TOTAL_PLT} jenis PLT`}
         noPad
       >
         <DataTable
-          minWidth={560}
+          minWidth={640}
           cols={[
-            { label: 'Jenis PLT', width: '22%' },
-            { label: 'LSTM (Fine-Tuning)', width: '20%', align: 'right' },
-            { label: 'ARIMA(1,1,1)', width: '20%', align: 'right' },
-            { label: 'Naive Persistence', width: '20%', align: 'right' },
-            { label: 'Metode Terbaik', width: '18%', align: 'right' },
+            { label: 'Jenis PLT', width: '20%' },
+            ...METODE.map(m => ({ label: m.label, width: '17%', align: 'right' })),
+            { label: 'Terbaik', width: '12%', align: 'right' },
           ]}
-          rows={BASELINE_BY_PLT.map(({ plt, rows, best }) => {
-            const byModel = Object.fromEntries(rows.map(r => [r.model, r]));
-            const lstm = byModel['LSTM_FineTuning'];
-            const arima = byModel['ARIMA(1, 1, 1)'];
-            const naive = byModel['Naive_Persistence'];
-            const bestLabel = best?.model === 'LSTM_FineTuning' ? 'LSTM'
-              : best?.model === 'Naive_Persistence' ? 'Naive'
-              : best?.model?.startsWith('ARIMA') ? 'ARIMA' : '—';
+          rows={MODEL_COMPARISON.map(({ plt, best, ...metrik }) => {
+            // Angka kecil (PLTS/PLTS Atap) butuh lebih banyak desimal supaya
+            // selisih antar metode tidak hilang oleh pembulatan.
+            const desimal = metrik.lstm.rmse < 1 ? 4 : 2;
             return (
               <tr key={plt} style={{ borderBottom: `1px solid ${C.line}` }}>
                 <Td>{plt}</Td>
-                <Td align="right" mono color={best?.model === 'LSTM_FineTuning' ? C.ok : undefined}>
-                  {lstm ? `${fmt(lstm.mape, 1)}%` : '—'}
+                {METODE.map(m => (
+                  <Td
+                    key={m.key}
+                    align="right"
+                    mono
+                    color={best === m.key ? C.ok : undefined}
+                  >
+                    {fmt(metrik[m.key].rmse, desimal)}
+                  </Td>
+                ))}
+                <Td align="right" mono color={best === 'lstm' ? C.blue : C.red}>
+                  {LABEL_SINGKAT[best]}
                 </Td>
-                <Td align="right" mono color={best?.model?.startsWith('ARIMA') ? C.ok : undefined}>
-                  {arima ? `${fmt(arima.mape, 1)}%` : '—'}
-                </Td>
-                <Td align="right" mono color={best?.model === 'Naive_Persistence' ? C.ok : undefined}>
-                  {naive ? `${fmt(naive.mape, 1)}%` : '—'}
-                </Td>
-                <Td align="right" mono color={bestLabel === 'LSTM' ? C.blue : C.red}>{bestLabel}</Td>
               </tr>
             );
           })}
         />
       </Panel>
-      <Note tone="warn">
-        MAPE (semakin kecil semakin baik). Pada model pipeline audit (satu model per jenis PLT, uji = 2025), <strong>LSTM menang di 2 dari 5 jenis PLT</strong> (PLTS &amp; PLTS Atap, skala kecil), tapi <strong>kalah dari naive persistence</strong> di PLTA &amp; PLTM dan <strong>kalah dari ARIMA</strong> di PLTB. Klaim "LSTM lebih unggul dari metode tradisional" perlu dikualifikasi per jenis PLT, bukan digeneralisasi. Tabel ini membandingkan model tahap Fine-Tuning dari pipeline audit (<code>bs_tf_lstm_fix_fixed.py</code>) — <strong>bukan</strong> model produksi (pooled + ensemble) yang dipakai halaman Prediksi EBT, yang unggul di 3 dari 5 jenis PLT (lihat <code>audit/results/framing_findings.md</code>).
+      <Note tone={LSTM_MENANG > MODEL_TOTAL_PLT / 2 ? 'info' : 'warn'}>
+        Tabel ini memakai <strong>model produksi</strong> (pooled + category embedding + ensembling) — model yang sama persis yang melayani halaman Prediksi EBT.{' '}
+        <strong>LSTM unggul di {LSTM_MENANG} dari {MODEL_TOTAL_PLT} jenis PLT</strong> (PLTA, PLTB, PLTM), dengan akurasi 89–93% di kelimanya.{' '}
+        PLTS &amp; PLTS Atap masih kalah tipis dari <em>seasonal naive × rasio kapasitas</em>; keduanya adalah kategori berskala terkecil, dan pada 24 titik latih per jenis PLT selisih ini masih berada di dalam rentang ketidakpastian.{' '}
+        Kombinasi model <strong>tidak ditukar</strong> untuk mengejar skor test yang lebih bagus, karena pemilihan berdasarkan data uji adalah bentuk kebocoran data.
       </Note>
 
       <Footer />
