@@ -246,8 +246,12 @@ jauh lebih kuat daripada memaksakan klaim "LSTM lebih unggul".
 - Eksperimen ini hanya mengevaluasi pada 2025 (12 titik per jenis PLT).
   Kesimpulannya rapuh terhadap satu tahun uji; idealnya diulang begitu data
   2026 tersedia.
-- Skrip pembangun dataset (`disagregasi_*.py`, `tarik_cuaca_nasa_power*.py`)
-  belum ada di repo → dataset belum reproducible dari sumber mentah.
+- ~~Skrip pembangun dataset belum ada di repo~~ — **sudah beres**: seluruh
+  rantai (`tarik_cuaca_nasa_power*.py` → `disagregasi_*.py`) ada di
+  `audit/source/` dan diverifikasi ujung-ke-ujung memakai data NASA POWER
+  API live, hasilnya identik nol persis dengan dataset yang dipakai
+  pipeline. Lihat `audit/source/README.md` dan
+  `DOKUMENTASI_DATASET_{REGIONAL,NASIONAL}_V2.md`.
 
 ---
 

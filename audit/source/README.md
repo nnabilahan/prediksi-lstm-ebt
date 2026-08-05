@@ -55,45 +55,54 @@ Skrip pembangun:
   Produksi gabungan Hydro) — **bukan** hasil pengukuran terpisah.
 
 Keduanya butuh file cuaca riil sebagai input (`--cuaca`), format kolom
-`Kategori,Tahun,Bulan,Nilai_Cuaca`, dihasilkan oleh
-`tarik_cuaca_nasa_power.py` / `tarik_cuaca_nasa_power_nasional.py`
-(**skrip ini dan `DOKUMENTASI_DATASET_*_V2.md` belum ada di repo** — dua
-skrip disagregasi di atas diterima terpisah dan sudah diverifikasi, tapi
-langkah penarikan cuaca dari NASA POWER API belum bisa direproduksi dari
-sini).
+`Kategori,Tahun,Bulan,Nilai_Cuaca`. File ini **ada di repo**, hasil tarikan
+sungguhan (bukan rekonstruksi):
 
-**Verifikasi yang sudah dilakukan** (bukan sekadar membaca kode): cuaca riil
-per kategori direkonstruksi ulang dari kolom `Cuaca` pada kedua CSV final di
-atas (sah dilakukan karena tiap jenis PLT dalam satu kategori berbagi nilai
-Cuaca yang identik), lalu dipakai sebagai input kedua skrip. Hasilnya
-**identik nol persis** (`|diff| = 0.000000` di kolom Produksi, Cuaca, dan
-Kapasitas) dengan `DATA_REGIONAL_5JENIS.csv` / `DATA_NASIONAL_4JENIS.csv`
-yang sudah dipakai pipeline. Ini membuktikan formula disagregasi
-(rata-rata bergerak 3 bulan untuk Hydro, proporsi langsung untuk
-Solar/Wind) dan angka `ANNUAL` di dalam kedua skrip memang persis yang
-menghasilkan dataset yang sedang dipakai — bukan cuma skrip yang "terlihat
+- `tarik_cuaca_nasa_power.py` / `.ipynb` — Tahap 3 Regional. Butuh koneksi
+  internet ke `power.larc.nasa.gov` (tidak bisa jalan di sandbox tanpa
+  akses jaringan). Output: `cuaca_riil_regional.csv`.
+- `tarik_cuaca_nasa_power_nasional.py` / `.ipynb` — versi nasional. Output:
+  `cuaca_riil_nasional.csv`.
+
+Dokumentasi metodologi lengkap (sumber data tahunan, justifikasi koordinat,
+riwayat perbaikan file 2025, daftar keterbatasan untuk BAB IV/V):
+[`DOKUMENTASI_DATASET_REGIONAL_V2.md`](DOKUMENTASI_DATASET_REGIONAL_V2.md) dan
+[`DOKUMENTASI_DATASET_NASIONAL_V2.md`](DOKUMENTASI_DATASET_NASIONAL_V2.md).
+
+**Verifikasi ujung-ke-ujung yang sudah dilakukan** (bukan sekadar membaca
+kode): kedua skrip `tarik_cuaca_nasa_power*.py` dijalankan sungguhan ke
+NASA POWER API (respons live, bukan cache/mock), menghasilkan
+`cuaca_riil_regional.csv` (36 baris/kategori) dan `cuaca_riil_nasional.csv`
+(132 baris/kategori) — jumlah baris sesuai ekspektasi, tanpa data hilang.
+File itu lalu dipakai sebagai input `disagregasi_regional.py` /
+`disagregasi_nasional.py`. Hasilnya **identik nol persis**
+(`|diff| = 0.000000` di kolom Produksi, Cuaca, dan Kapasitas) dengan
+`DATA_REGIONAL_5JENIS.csv` / `DATA_NASIONAL_4JENIS.csv` yang sudah dipakai
+pipeline. Ini membuktikan **seluruh rantai** — dari API cuaca sampai
+dataset final — reproducible dari nol, bukan cuma skrip yang "terlihat
 masuk akal".
 
-**Keterbatasan yang wajib diungkap di laporan** (tetap berlaku, sekarang
-dengan sumber yang lebih spesifik — lihat komentar di kedua skrip):
+**Keterbatasan yang wajib diungkap di laporan** (rincian lengkap ada di
+kedua `DOKUMENTASI_DATASET_*_V2.md`):
 
 - Kolom `Produksi` sumber ESDM adalah hasil kalkulasi `Kapasitas × Capacity
   Factor asumsi × 8760 jam`, **bukan** observasi/metering langsung.
 - Produksi PLTA & PLTM nasional adalah hasil *split proporsional* dari satu
   kolom Hydro gabungan di HEESI, berdasarkan pangsa kapasitas (asumsi CF
   sama) — bukan pengukuran terpisah.
+- PLTS Atap tidak punya padanan nasional (HEESI tidak memisahkan solar
+  rooftop dari ground-mount) — sempat dicoba proxy data lampu jalan tenaga
+  surya, dibuang karena analoginya terlalu dipaksakan.
 - Data off-grid nasional baru tercatat mulai 2018; PLTB = 0 di 2013/2014/2017
   bukan data hilang — PLTB komersial pertama Indonesia (Sidrap) baru
   beroperasi 2018.
+- Koordinat cuaca ditentukan di level kategori (Hydro/Solar/Wind), bukan per
+  jenis PLT individual — PLTA & PLTM dianggap merespons cuaca yang sama,
+  begitu juga PLTS & PLTS Atap.
 - Disagregasi tahunan → bulanan memakai rata-rata bergerak 3 bulan untuk
   Hydro (proksi efek tampungan waduk) dan proporsi langsung untuk Solar/Wind.
-- Kolom `Cuaca` adalah data riil NASA POWER.
-
-**Yang masih belum ada di repo** (gap reproducibility yang tersisa):
-`tarik_cuaca_nasa_power.py` / `tarik_cuaca_nasa_power_nasional.py`, file
-`cuaca_riil_regional.csv` / `cuaca_riil_nasional.csv` hasil tarikan asli
-(bukan rekonstruksi), dan `DOKUMENTASI_DATASET_REGIONAL_V2.md` /
-`DOKUMENTASI_DATASET_NASIONAL_V2.md`.
+- Kolom `Cuaca` adalah data riil NASA POWER (`PRECTOTCORR`, `ALLSKY_SFC_SW_DWN`,
+  `WS10M` — rata-rata harian dalam bulan, bukan total bulanan).
 
 ---
 
