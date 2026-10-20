@@ -16,7 +16,25 @@ build_production_model.py. Kalau skrip itu dijalankan ulang dengan kombinasi
 pemenang berbeda, backend ikut menyesuaikan tanpa perlu diedit.
 """
 import json
+import os
 from pathlib import Path
+
+
+def load_project_env() -> None:
+    """Baca .env di root project agar backend dan frontend memakai URL yang sama."""
+    env_path = Path(__file__).resolve().parent.parent / ".env"
+    if not env_path.exists():
+        return
+
+    for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = [part.strip() for part in line.split("=", 1)]
+        os.environ.setdefault(key, value.strip().strip('"').strip("'"))
+
+
+load_project_env()
 
 # backend/config.py -> backend/ -> root repo
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -29,6 +47,12 @@ SCALER_PARAMS_PATH = PRODUCTION_DIR / "scalers" / "scaler_params.json"
 EVALUASI_FINAL_PATH = PRODUCTION_DIR / "evaluation" / "evaluasi_final.csv"
 
 DATASET_AWAL_PATH = BASE_DIR / "audit" / "source" / "DATA_REGIONAL_5JENIS.csv"
+
+FRONTEND_API_BASE = os.getenv("VITE_API_BASE", "http://localhost:8000")
+BACKEND_ALLOWED_ORIGINS_REGEX = os.getenv(
+    "BACKEND_ALLOWED_ORIGINS_REGEX",
+    r"^https?://(localhost|127\.0\.0\.1|.*\.loca\.lt|.*\.localtunnel\.me)(?::\d+)?$",
+)
 
 DATABASE_PATH = BACKEND_DIR / "siprebar.db"
 DATABASE_URL = f"sqlite:///{DATABASE_PATH}"

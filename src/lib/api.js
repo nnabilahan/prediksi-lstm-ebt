@@ -5,7 +5,8 @@
 // perbandingan ARIMA/Naive TETAP statis dari data.js -- tidak ada fungsi di
 // sini yang dipakai untuk itu.
 
-export const API_BASE = 'http://localhost:8000';
+export const API_BASE =
+  import.meta.env.VITE_API_BASE || 'http://localhost:8000';
 
 async function parseJsonSafe(res) {
   try {

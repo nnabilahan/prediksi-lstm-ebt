@@ -62,11 +62,11 @@ app = FastAPI(
 #
 # Port-nya tidak dipatok ke 5173: Vite otomatis pindah port kalau 5173 sedang
 # dipakai, dan kalau daftar origin dipatok maka aplikasi diam-diam gagal
-# memuat data dengan error CORS yang membingungkan. Regex ini hanya
-# mengizinkan localhost -- backend ini memang cuma untuk dijalankan lokal.
+# memuat data dengan error CORS yang membingungkan. Regex ini mengizinkan
+# localhost, loopback, dan URL publik dari localtunnel.
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=r"^http://(localhost|127\.0\.0\.1):\d+$",
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1|.*\.loca\.lt|.*\.localtunnel\.me)(?::\d+)?$",
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
